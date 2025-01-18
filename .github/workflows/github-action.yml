@@ -1,0 +1,51 @@
+#워크폴로우 이름
+name: CI
+
+#워크플로우가 시작될 조건
+on:
+  pull_request:
+    types: [closed]
+  #workflow를 수동으로 실행 가능
+  workflow_dispatch:
+
+env:
+  ECR_REPOSITORY: dev/resumate-ecr
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  #실행 환경 지정
+    #실행 스텝 지정
+    steps:
+      - name: Code checkout
+        id: checkout-code
+        uses: actions/checkout@v3
+
+      - name: AWS IAM 사용자 설정
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: ECR에 로그인
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+#      - name: ECR의 이미 업로드된 이미지 삭제
+#        uses: appleboy/ssh-action@master
+#        with:
+#          host: ${{ secrets.EC2_IP }}
+#          username: ${{ secrets.EC2_USERNAME }}
+#          key: ${{ secrets.EC2_SSH_KEY }}
+#          script: aws ecr batch-delete-image --profile ${{ secrets.IAM_PROFILE_USERNAME }}
+
+      - name: 도커이미지 빌드, 태그하고 ECR에 푸시
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run:
+          #도커 빌드, 태그
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          #ECR에 푸시
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
