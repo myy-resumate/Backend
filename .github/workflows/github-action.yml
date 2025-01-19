@@ -26,6 +26,13 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
+      - name: application.yml 파일 생성
+        run: |
+          mkdir -p ./src/main/resources
+          cd ./src/main/resources
+          touch ./application.yml
+          echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
