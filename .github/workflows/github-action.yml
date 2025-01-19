@@ -73,6 +73,6 @@ jobs:
         run: |
           aws deploy create-deployment \
           --application-name ${{ secrets.AWS_CODE_DEPLOY_APPLICATION_NAME }} \
-          --deployment-group-name ${{ AWS_CODE_DEPLOY_GROUP_NAME }} \
+          --deployment-group-name ${{ secrets.AWS_CODE_DEPLOY_GROUP_NAME }} \
           --revision revisionType=AppSpecContent,appSpecContent="{\"version\":0.0,\"Resources\":[{\"Type\":\"AWS::CodeDeploy::EC2::Application\",\"Properties\":{\"Tag\":\"$IMAGE_TAG\"}}]}" \
           --deployment-config-name CodeDeployDefault.AllAtOnce
