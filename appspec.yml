@@ -7,7 +7,16 @@ files:
     overwrite: yes
 
 permissions:
-  - object: /
+  - object: /home/ubuntu/resumate-deploy/
     pattern: "**"
-    owner: ubuntu
-    group: ubuntu
+    owner: root
+    group: root
+
+hooks:
+  ApplicationStart:
+    - location: scripts/deploy.sh
+      timeout: 120
+      runas: root
+    - location: scripts/health_check.sh
+      timeout: 60
+      runas: root
