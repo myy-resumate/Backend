@@ -9,7 +9,10 @@ on:
   workflow_dispatch:
 
 env:
-  ECR_REPOSITORY: dev/resumate-ecr
+  ECR_REPOSITORY: ${{ secrets.AWS_ECR_REPOSITORY }}
+  S3_BUCKET_NAME: ${{ secrets.AWS_S3_BUCKET_NAME }}
+  CODE_DEPLOY_NAME: ${{ secrets.AWS_CODE_DEPLOY_APPLICATION_NAME }}
+  CODE_DEPLOY_GROUP: ${{ secrets.AWS_CODE_DEPLOY_GROUP_NAME }}
 
 jobs:
   build:
@@ -63,16 +66,20 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          #도커 빌드, 태그
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          #도커 빌드
+          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          #태그
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           #ECR에 푸시
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
           echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
-      - name: Code Deploy를 통한 배포
+      - name: Code Deploy를 통해 배포
         run: |
+          echo "Deploy to EC2"
           aws deploy create-deployment \
-          --application-name ${{ secrets.AWS_CODE_DEPLOY_APPLICATION_NAME }} \
-          --deployment-group-name ${{ secrets.AWS_CODE_DEPLOY_GROUP_NAME }} \
-          --revision revisionType=AppSpecContent,appSpecContent="{\"version\":0.0,\"Resources\":[{\"Type\":\"AWS::CodeDeploy::EC2::Application\",\"Properties\":{\"Tag\":\"$IMAGE_TAG\"}}]}" \
+          --application-name $CODE_DEPLOY_NAME \
+          --deployment-group-name $CODE_DEPLOY_GROUP \
           --deployment-config-name CodeDeployDefault.AllAtOnce
