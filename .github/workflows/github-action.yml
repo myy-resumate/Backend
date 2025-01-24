@@ -50,7 +50,6 @@ jobs:
         run: ./gradlew clean build
 
       - name: application.yml 변경
-        if: contains(github.ref, 'master')
         run: |
           cd ./src/main/resources
           rm ./application.yml
