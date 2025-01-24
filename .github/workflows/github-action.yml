@@ -34,7 +34,7 @@ jobs:
           mkdir -p ./src/main/resources
           cd ./src/main/resources
           touch ./application.yml
-          echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
+          echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application.yml
 
       - name: 빌드를 위한 MySQL 설정
         uses: mirromutth/mysql-action@v1.1
@@ -48,6 +48,16 @@ jobs:
 
       - name: Build with Gradle
         run: ./gradlew clean build
+
+      - name: application.yml 변경
+        if: contains(github.ref, 'master')
+        run: |
+          cd ./src/main/resources
+          rm ./application.yml
+          
+          ls -al
+          touch ./application.yml
+          echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
 
       - name: AWS IAM 사용자 설정
         uses: aws-actions/configure-aws-credentials@v2
