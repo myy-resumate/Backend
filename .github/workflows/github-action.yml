@@ -36,6 +36,13 @@ jobs:
           touch ./application.yml
           echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
 
+      - name: 빌드를 위한 MySQL 설정
+        uses: mirromutth/mysql-action@v1.1
+        with:
+          mysql database: 'tempDB'
+          mysql user: 'temp'
+          mysql password: ${{ secrets.TEMP_MYSQL_PASSWORD }}
+
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
