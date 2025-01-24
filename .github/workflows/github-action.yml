@@ -34,7 +34,7 @@ jobs:
           mkdir -p ./src/main/resources
           cd ./src/main/resources
           touch ./application.yml
-          echo "${{ secrets.APPLICATION_YML }}" > ./application-temp.yml
+          echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
           touch ./application-temp.yml
           echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application-temp.yml
           touch ./application-dev.yml
