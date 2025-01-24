@@ -13,8 +13,8 @@ public class TestController {
 
     @GetMapping("/hello")
     public ApiResponseDTO<String> test() {
-        throw new BusinessBaseException(ErrorCode.UNAUTHORIZED);
+        //throw new BusinessBaseException(ErrorCode.UNAUTHORIZED);
 
-        //return ApiResponseDTO.onSuccess("테스트 성공");
+        return ApiResponseDTO.onSuccess("테스트 성공");
     }
 }
