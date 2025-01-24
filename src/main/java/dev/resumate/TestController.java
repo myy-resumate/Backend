@@ -15,6 +15,6 @@ public class TestController {
     public ApiResponseDTO<String> test() {
         //throw new BusinessBaseException(ErrorCode.UNAUTHORIZED);
 
-        return ApiResponseDTO.onSuccess("테스트 성공성공성공");
+        return ApiResponseDTO.onSuccess("테스트 성공성공성공성공");
     }
 }
