@@ -3,8 +3,9 @@ name: CI
 
 #워크플로우가 시작될 조건
 on:
-  pull_request:
-    types: [closed]
+  push:
+    branches:
+      - main
   #workflow를 수동으로 실행 가능
   workflow_dispatch:
 
