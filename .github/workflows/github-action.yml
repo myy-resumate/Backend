@@ -78,7 +78,7 @@ jobs:
           IMAGE_TAG: ${{ github.sha }}
         run: |
           #도커 빌드
-          docker build -t $ECR_REPOSITORY:$IMAGE_TAG .
+          docker build --no-cache -t $ECR_REPOSITORY:$IMAGE_TAG .
           #태그
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker tag $ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
