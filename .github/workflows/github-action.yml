@@ -35,10 +35,18 @@ jobs:
           cd ./src/main/resources
           touch ./application.yml
           echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
-          touch ./application-temp.yml
-          echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application-temp.yml
+
+      - name: application-dev.yml 파일 생성
+        run: |
+          cd ./src/main/resources
           touch ./application-dev.yml
           echo "${{ secrets.APPLICATION_DEV_YML }}" > ./application-dev.yml
+
+      - name: application-temp.yml 파일 생성
+        run: |
+          cd ./src/main/resources
+          touch ./application-temp.yml
+          echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application-temp.yml
 
       - name: 빌드를 위한 MySQL 설정
         uses: mirromutth/mysql-action@v1.1
