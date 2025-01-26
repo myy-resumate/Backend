@@ -35,16 +35,8 @@ jobs:
           cd ./src/main/resources
           touch ./application.yml
           echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
-
-      - name: application-dev.yml 파일 생성
-        run: |
-          cd ./src/main/resources
           touch ./application-dev.yml
           echo "${{ secrets.APPLICATION_DEV_YML }}" > ./application-dev.yml
-
-      - name: application-temp.yml 파일 생성
-        run: |
-          cd ./src/main/resources
           touch ./application-temp.yml
           echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application-temp.yml
 
