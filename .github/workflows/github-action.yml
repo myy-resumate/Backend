@@ -3,9 +3,8 @@ name: CI
 
 #워크플로우가 시작될 조건
 on:
-  push:
-    branches:
-      - main
+  pull_request:
+    types: [closed]
   #workflow를 수동으로 실행 가능
   workflow_dispatch:
 
@@ -36,16 +35,8 @@ jobs:
           cd ./src/main/resources
           touch ./application.yml
           echo "${{ secrets.APPLICATION_YML }}" > ./application.yml
-
-      - name: application-dev.yml 파일 생성
-        run: |
-          cd ./src/main/resources
           touch ./application-dev.yml
           echo "${{ secrets.APPLICATION_DEV_YML }}" > ./application-dev.yml
-
-      - name: application-temp.yml 파일 생성
-        run: |
-          cd ./src/main/resources
           touch ./application-temp.yml
           echo "${{ secrets.TEMP_APPLICATION_YML }}" > ./application-temp.yml
 
@@ -73,13 +64,9 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-#      - name: ECR의 이미 업로드된 이미지 삭제
-#        uses: appleboy/ssh-action@master
-#        with:
-#          host: ${{ secrets.EC2_IP }}
-#          username: ${{ secrets.EC2_USERNAME }}
-#          key: ${{ secrets.EC2_SSH_KEY }}
-#          script: aws ecr batch-delete-image --profile ${{ secrets.IAM_PROFILE_USERNAME }}
+      - name: ECR의 이미 업로드된 이미지 삭제
+        run: |
+          aws ecr batch-delete-image --repository-name $ECR_REPOSITORY --image-ids imageTag="latest";
 
       - name: 도커이미지 빌드, 태그하고 ECR에 푸시
         env:
