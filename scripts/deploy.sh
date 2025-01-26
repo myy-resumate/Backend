@@ -16,6 +16,6 @@ sudo docker run -d -p 8080:8080 897729140973.dkr.ecr.ap-northeast-2.amazonaws.co
 
 echo "> delete unnecessary docker containers and images"
 # shellcheck disable=SC2046
-sudo docker rm $(docker ps -a --filter "status=exited" - q)  #모든 중단된 컨테이너들 삭제
+sudo docker rm $(docker ps -a --filter "status=exited" -q)  #모든 중단된 컨테이너들 삭제
 # shellcheck disable=SC2046
 sudo docker rmi $(docker images --filter "dangling=true" -q)
