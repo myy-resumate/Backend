@@ -67,7 +67,7 @@ jobs:
       - name: ECR의 이미 업로드된 이미지 삭제
         run: |
           IMAGE_DIGEST=$(aws ecr describe-images --repository-name $ECR_REPOSITORY \
-          --query 'imageDetails[?contains(imageTags, 'latest')].imageDigest' --output test)
+          --query 'imageDetails[?contains(imageTags, 'latest')].imageDigest' --output text)
           aws ecr batch-delete-image --repository-name $ECR_REPOSITORY --image-ids imageDigest="$IMAGE_DIGEST"
 
       - name: 도커이미지 빌드, 태그하고 ECR에 푸시
