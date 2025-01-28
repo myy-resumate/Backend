@@ -1,4 +1,4 @@
-package dev.resumate.global.exception;
+package dev.resumate.apiPayload.exception;
 
 import lombok.Getter;
 

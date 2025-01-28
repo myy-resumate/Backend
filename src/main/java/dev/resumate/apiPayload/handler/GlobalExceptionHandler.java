@@ -1,8 +1,8 @@
-package dev.resumate.global.handler;
+package dev.resumate.apiPayload.handler;
 
-import dev.resumate.global.exception.BusinessBaseException;
-import dev.resumate.global.exception.ErrorCode;
-import dev.resumate.global.response.ApiResponseDTO;
+import dev.resumate.apiPayload.exception.BusinessBaseException;
+import dev.resumate.apiPayload.exception.ErrorCode;
+import dev.resumate.apiPayload.response.ApiResponseDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.HttpRequestMethodNotSupportedException;

@@ -5,7 +5,7 @@ import dev.resumate.dto.MemberRequestDTO;
 
 public class MemberConverter {
 
-    public static Member toMember(MemberRequestDTO.MemberJoinDto request) {
+    public static Member toMember(MemberRequestDTO.JoinDto request) {
         return Member.builder()
                 .name(request.getName())
                 .email(request.getEmail())

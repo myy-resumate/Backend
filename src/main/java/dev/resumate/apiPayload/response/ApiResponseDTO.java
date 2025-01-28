@@ -1,4 +1,4 @@
-package dev.resumate.global.response;
+package dev.resumate.apiPayload.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
