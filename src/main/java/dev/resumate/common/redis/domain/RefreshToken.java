@@ -1,4 +1,4 @@
-package dev.resumate.config.redis.domain;
+package dev.resumate.common.redis.domain;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,6 +13,6 @@ import org.springframework.data.redis.core.RedisHash;
 public class RefreshToken {
 
     @Id
-    private Long id;
+    private Long id;  //member의 id
     private String refreshToken;
 }

@@ -1,4 +1,4 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
 import dev.resumate.domain.Member;
 import lombok.Builder;

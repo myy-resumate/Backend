@@ -22,8 +22,6 @@ public enum ErrorCode {
     MEMBER_JWT_TOKEN_EXPIRE(HttpStatus.BAD_REQUEST, "MEMBER401", "토큰이 만료되었습니다."),
     MEMBER_JWT_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "MEMBER402", "유효하지 않은 토큰입니다."),
     MEMBER_JWT_TOKEN_NULL(HttpStatus.BAD_REQUEST, "MEMBER403", "토큰이 존재하지 않습니다."),
-    MEBER_LOGOUT_STATUS(HttpStatus.BAD_REQUEST, "MEMBER404", "이미 로그아웃된 상태입니다."),
-
 
     ;
 

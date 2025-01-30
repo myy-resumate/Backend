@@ -1,4 +1,4 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

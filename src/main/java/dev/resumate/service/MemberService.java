@@ -1,10 +1,13 @@
 package dev.resumate.service;
 
-import dev.resumate.config.redis.domain.RefreshToken;
-import dev.resumate.config.redis.repository.RefreshTokenRepository;
-import dev.resumate.config.security.CustomUserDetails;
-import dev.resumate.config.security.JwtTokenDTO;
-import dev.resumate.config.security.JwtUtil;
+import dev.resumate.common.cookie.CookieUtil;
+import dev.resumate.common.redis.domain.LogoutToken;
+import dev.resumate.common.redis.domain.RefreshToken;
+import dev.resumate.common.redis.repository.LogoutTokenRepository;
+import dev.resumate.common.redis.repository.RefreshTokenRepository;
+import dev.resumate.common.security.CustomUserDetails;
+import dev.resumate.common.security.JwtTokenDTO;
+import dev.resumate.common.security.JwtUtil;
 import dev.resumate.converter.MemberConverter;
 import dev.resumate.domain.Member;
 import dev.resumate.dto.MemberRequestDTO;
@@ -12,6 +15,7 @@ import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.dto.MemberResponseDTO;
 import dev.resumate.repository.MemberRepository;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -22,17 +26,23 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
+import java.util.Date;
 import java.util.Iterator;
 
 @Service
 @RequiredArgsConstructor
 public class MemberService {
 
+    private final static String COOKIE_NAME = "refresh_token";
+    private final static int COOKIE_MAX_AGE = 7 * 24 * 60 * 60;  //쿠키 만료시간 - 1주
+
     private final MemberRepository memberRepository;
     private final BCryptPasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final CookieUtil cookieUtil;
+    private final LogoutTokenRepository logoutTokenRepository;
 
     /**
      * 회원가입
@@ -65,6 +75,22 @@ public class MemberService {
         return createToken(customUserDetails, response);
     }
 
+    /**
+     * 로그아웃
+     * @param request
+     * @param member
+     */
+    public void logout(HttpServletRequest request, Member member) {
+        String accessToken = request.getHeader("Authorization").split(" ")[1];
+
+        LogoutToken logoutToken = LogoutToken.builder()
+                .accessToken(accessToken)
+                .memberId(member.getId())
+                .build();
+        logoutTokenRepository.save(logoutToken);
+        refreshTokenRepository.deleteById(member.getId());
+    }
+
     //role 추출
     private String getRole(Collection<? extends GrantedAuthority> authorities) {
 
@@ -81,10 +107,12 @@ public class MemberService {
         //redis에 refresh토큰 저장
         saveRefreshToken(customUserDetails.getUserId(), jwtTokenDTO.getRefreshToken());
 
+        //쿠키에 추가
+        cookieUtil.addCookie(response, COOKIE_NAME, jwtTokenDTO.getRefreshToken(), COOKIE_MAX_AGE);
+
         return MemberResponseDTO.TokenDTO.builder()
                 .grantType(jwtTokenDTO.getGrantType())
                 .accessToken(jwtTokenDTO.getAccessToken())
-                .refreshToken(jwtTokenDTO.getRefreshToken())
                 .build();
     }
 

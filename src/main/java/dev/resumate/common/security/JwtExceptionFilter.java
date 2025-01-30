@@ -1,4 +1,4 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.resumate.apiPayload.exception.BusinessBaseException;

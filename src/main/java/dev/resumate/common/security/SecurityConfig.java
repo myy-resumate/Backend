@@ -1,5 +1,7 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
+import dev.resumate.common.security.JwtExceptionFilter;
+import dev.resumate.common.security.JwtFilter;
 import dev.resumate.domain.enums.Role;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;

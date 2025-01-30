@@ -1,5 +1,6 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
+import dev.resumate.common.security.CustomUserDetails;
 import dev.resumate.domain.Member;
 import dev.resumate.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;

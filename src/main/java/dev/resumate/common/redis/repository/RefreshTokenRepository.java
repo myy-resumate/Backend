@@ -1,6 +1,6 @@
-package dev.resumate.config.redis.repository;
+package dev.resumate.common.redis.repository;
 
-import dev.resumate.config.redis.domain.RefreshToken;
+import dev.resumate.common.redis.domain.RefreshToken;
 import org.springframework.data.repository.CrudRepository;
 import org.springframework.stereotype.Repository;
 

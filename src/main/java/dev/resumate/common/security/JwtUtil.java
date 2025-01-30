@@ -1,7 +1,9 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
+import dev.resumate.common.security.CustomUserDetailsService;
+import dev.resumate.common.security.JwtTokenDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.JwtException;

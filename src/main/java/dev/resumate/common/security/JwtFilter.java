@@ -1,7 +1,8 @@
-package dev.resumate.config.security;
+package dev.resumate.common.security;
 
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
+import dev.resumate.common.redis.repository.LogoutTokenRepository;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,6 +18,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Optional;
 
 @RequiredArgsConstructor
 @Component
@@ -24,6 +26,7 @@ import java.util.Arrays;
 public class JwtFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final LogoutTokenRepository logoutTokenRepository;
 
     //JWT 토큰 검증
     @Override
@@ -47,13 +50,11 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = authorization.split(" ")[1];
         jwtUtil.validateToken(token);
 
-        Claims claims = jwtUtil.parseJwt(token);
-        /*if (Optional.ofNullable(redisUtil.getData("black_list:" + claims.get("username", String.class)))
-                .orElse("")
-                .equals(token)) {  //블랙리스트 토큰 검사
-            throw new BusinessBaseException(ErrorCode.MEBER_LOGOUT_STATUS);
+        //블랙 리스트 토큰 검사
+        if (logoutTokenRepository.findById(token).isPresent()) {
+            throw new BusinessBaseException(ErrorCode.UNAUTHORIZED);
         }
-*/
+
         Authentication authToken = jwtUtil.getAuthentication(token);
         SecurityContextHolder.getContext().setAuthentication(authToken);
         filterChain.doFilter(request, response);
