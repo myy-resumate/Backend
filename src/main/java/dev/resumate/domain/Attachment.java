@@ -19,6 +19,9 @@ public class Attachment extends BaseTimeEntity {
     @Column(name = "attachment_id")
     private Long id;
 
+    private String fileName;
+
+    @Column(columnDefinition = "TEXT")  //url에 한글이 들어가면 크기가 부족할 수 있으므로 TEXT로
     private String url;
 
     @ManyToOne(fetch = FetchType.LAZY)

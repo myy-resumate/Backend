@@ -5,10 +5,13 @@ import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import io.awspring.cloud.s3.S3Operations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 
 @Service
@@ -27,7 +30,8 @@ public class ResumeService {
      * @param files
      * @return
      */
-    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) {
+    @Transactional //하나라도 실패하면 전체 롤백
+    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) throws IOException {
 
         Resume resume = Resume.builder()
                 .title(request.getTitle())
@@ -48,10 +52,10 @@ public class ResumeService {
         if (request.getTags() != null) {
             tagService.saveTag(request.getTags(), member, newResume);
         }
-        //첨부파일 저장 - s3업로드 후 url만 저장
+        //첨부파일 저장
         if (files != null) {
-            //s3 업로드하는 코드
-            attachmentService.saveAttachment("url", newResume);
+            //s3 업로드하고, url 저장
+            attachmentService.uploadS3AndSaveUrl(files, newResume);
         }
 
         return ResumeResponseDTO.CreateResultDTO.builder()
