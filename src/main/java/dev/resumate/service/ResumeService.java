@@ -1,11 +1,12 @@
 package dev.resumate.service;
 
+import dev.resumate.apiPayload.exception.BusinessBaseException;
+import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
-import io.awspring.cloud.s3.S3Operations;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ public class ResumeService {
     private final CoverLetterService coverLetterService;
     private final TagService tagService;
     private final AttachmentService attachmentService;
+    private final TaggingService taggingService;
 
     /**
      * 지원서 저장
@@ -61,5 +63,39 @@ public class ResumeService {
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
                 .build();
+    }
+
+    @Transactional
+    public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
+        Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
+        resume.setResume(request);
+
+        //자소서 수정
+        if (request.getCoverLetterDTOS() != null) {
+            coverLetterService.updateCoverLetter(request.getCoverLetterDTOS(), resume);
+        }
+        //태그 수정
+        if (request.getTags() != null) {
+            tagService.updateTag(request.getTags(), member, resume);
+        }
+        //첨부파일 수정
+        if (files != null) {
+            //s3 업로드하고, url 저장
+            attachmentService.updateFile(files, resume);
+        }
+
+        return ResumeResponseDTO.UpdateResultDTO.builder()
+                .resumeId(resume.getId())
+                .build();
+    }
+
+    @Transactional
+    public void deleteResume(Long resumeId) {
+        Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
+        resumeRepository.deleteById(resumeId);
+        //태깅은 cascade 안했으므로 따로 삭제
+        taggingService.deleteTagging(resume);
+        //첨부파일 s3에서 삭제
+        attachmentService.deleteFromS3(resume);
     }
 }

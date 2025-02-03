@@ -16,4 +16,13 @@ public class ResumeResponseDTO {
         private Long resumeId;
     }
 
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class UpdateResultDTO {
+
+        private Long resumeId;
+    }
+
 }

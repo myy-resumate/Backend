@@ -4,6 +4,7 @@ import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.domain.Tag;
 import dev.resumate.repository.TagRepository;
+import dev.resumate.repository.TaggingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,6 +16,7 @@ public class TagService {
 
     private final TagRepository tagRepository;
     private final TaggingService taggingService;
+    private final TaggingRepository taggingRepository;
 
     public void saveTag(List<String> tags, Member member, Resume resume) {
 
@@ -30,5 +32,12 @@ public class TagService {
                 taggingService.saveTagging(resume, tag);
             }
         }
+    }
+
+    public void updateTag(List<String> tags, Member member, Resume resume) {
+
+        //태깅 삭제
+        taggingRepository.deleteAllByResume(resume);
+        saveTag(tags, member, resume);
     }
 }

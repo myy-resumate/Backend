@@ -21,4 +21,8 @@ public class TaggingService {
                 .build();
         taggingRepository.save(tagging);
     }
+
+    public void deleteTagging(Resume resume) {
+        taggingRepository.deleteAllByResume(resume);
+    }
 }
