@@ -20,14 +20,23 @@ public class S3Util {
     private String bucketName;
     private final S3Operations s3Operations;
 
-    //s3에 업로드
+    /**
+     * S3에 업로드
+     * @param file
+     * @param uploadKey
+     * @return
+     * @throws IOException
+     */
     public S3Resource uploadObject(MultipartFile file, String uploadKey) throws IOException {
         InputStream inputStream = file.getInputStream();
         return s3Operations.upload(bucketName, uploadKey, inputStream, ObjectMetadata.builder().contentType(file.getContentType()).build());
     }
 
 
-    //s3에서 object 삭제
+    /**
+     * S3 오브젝트 삭제
+     * @param uploadKey
+     */
     public void deleteObject(String uploadKey) {
 
         s3Operations.deleteObject(bucketName, uploadKey);

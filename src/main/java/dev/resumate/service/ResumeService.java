@@ -2,6 +2,10 @@ package dev.resumate.service;
 
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
+import dev.resumate.converter.CoverLetterConverter;
+import dev.resumate.converter.ResumeConverter;
+import dev.resumate.domain.Attachment;
+import dev.resumate.domain.CoverLetter;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeRequestDTO;
@@ -13,17 +17,21 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class ResumeService {
 
+    private static final String FOLDER = "attachment/";
+
     private final ResumeRepository resumeRepository;
-    private final CoverLetterService coverLetterService;
     private final TagService tagService;
     private final AttachmentService attachmentService;
     private final TaggingService taggingService;
+    private final CoverLetterService coverLetterService;
 
     /**
      * 지원서 저장
@@ -35,30 +43,25 @@ public class ResumeService {
     @Transactional //하나라도 실패하면 전체 롤백
     public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) throws IOException {
 
-        Resume resume = Resume.builder()
-                .title(request.getTitle())
-                .organization(request.getOrganization())
-                .orgUrl(request.getOrgURl())
-                .applyStart(request.getApplyStart())
-                .applyEnd(request.getApplyEnd())
-                .member(member)
-                .build();
+        Resume resume = ResumeConverter.toResume(request, member);
 
-        Resume newResume = resumeRepository.save(resume);
+        //자소서 추가
+        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
+            resume.addCoverLetter(CoverLetterConverter.toCoverLetter(coverLetterDTO));
+        }
 
-        //자소서 저장
-        if (request.getCoverLetterDTOS() != null) {
-            coverLetterService.saveCoverLetter(request.getCoverLetterDTOS(), newResume);
-        }
-        //태그 저장
-        if (request.getTags() != null) {
-            tagService.saveTag(request.getTags(), member, newResume);
-        }
-        //첨부파일 저장
+        //첨부파일 추가
         if (files != null) {
-            //s3 업로드하고, url 저장
-            attachmentService.uploadS3AndSaveUrl(files, newResume);
+            for (MultipartFile file : files) {
+                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file);
+                resume.addAttachment(attachment);
+            }
         }
+
+        Resume newResume = resumeRepository.save(resume);  //cascade로 저장
+
+        //태그 저장은 따로
+        tagService.saveTag(request.getTags(), member, newResume);
 
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
@@ -68,20 +71,25 @@ public class ResumeService {
     @Transactional
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
-        resume.setResume(request);
 
-        //자소서 수정
-        if (request.getCoverLetterDTOS() != null) {
-            coverLetterService.updateCoverLetter(request.getCoverLetterDTOS(), resume);
+        //자소서 삭제 후 리스트 새로 생성
+        coverLetterService.deleteCoverLetters(resume);
+        List<CoverLetter> coverLetters = new ArrayList<>();
+        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
+            coverLetters.add(CoverLetterConverter.toCoverLetter(coverLetterDTO));
         }
+
+        //첨부파일 수정
+        List<Attachment> attachments = new ArrayList<>();
+        if (files != null) {
+            attachments = attachmentService.updateFile(files, resume);
+        }
+
+        resume.setResume(request, coverLetters, attachments);  //cascade로 저장
+
         //태그 수정
         if (request.getTags() != null) {
             tagService.updateTag(request.getTags(), member, resume);
-        }
-        //첨부파일 수정
-        if (files != null) {
-            //s3 업로드하고, url 저장
-            attachmentService.updateFile(files, resume);
         }
 
         return ResumeResponseDTO.UpdateResultDTO.builder()

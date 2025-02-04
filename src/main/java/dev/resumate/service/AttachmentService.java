@@ -1,6 +1,7 @@
 package dev.resumate.service;
 
 import dev.resumate.common.s3.S3Util;
+import dev.resumate.converter.AttachmentConverter;
 import dev.resumate.domain.Attachment;
 import dev.resumate.domain.Resume;
 import dev.resumate.repository.AttachmentRepository;
@@ -15,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -27,43 +29,27 @@ public class AttachmentService {
     private static final String FOLDER = "attachment/";
 
     private final AttachmentRepository attachmentRepository;
-    private final S3Operations s3Operations;
     private final S3Util s3Util;
 
-    //첨부파일 저장
-    private void saveAttachment(String fileName, String uploadKey, String url, Resume resume) {
+    public Attachment uploadS3AndConvertAttachment(MultipartFile file) throws IOException {
 
-        Attachment attachment = Attachment.builder()
-                .fileName(fileName)
-                .uploadKey(uploadKey)
-                .url(url)
-                .resume(resume)
-                .build();
-
-        attachmentRepository.save(attachment);
-    }
-
-    //s3 업로드
-    public void uploadS3AndSaveUrl(List<MultipartFile> files, Resume resume) throws IOException {
-
-        for (MultipartFile file : files) {
-            UUID uuid = UUID.randomUUID();  //고유한 이름 생성
-            String uploadKey = FOLDER + uuid + "_" + file.getOriginalFilename();
-            S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
-            saveAttachment(file.getOriginalFilename(), uploadKey, s3Resource.getURL().toString(), resume);
-        }
+        String uploadKey = FOLDER + UUID.randomUUID() + "_" + file.getOriginalFilename();  //고유한 키 생성
+        S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
+        return AttachmentConverter.toAttachment(s3Resource.getURL().toString(), uploadKey, file.getOriginalFilename());
     }
 
     //s3, db에서 삭제 후, 다시 업로드, 저장
-    @Transactional
-    public void updateFile(List<MultipartFile> files, Resume resume) throws IOException{
+    public List<Attachment> updateFile(List<MultipartFile> files, Resume resume) throws IOException{
 
-        //db에서 삭제
-        attachmentRepository.deleteAllByResume(resume);
         //s3에서 삭제
         deleteFromS3(resume);
 
-        uploadS3AndSaveUrl(files, resume);
+        attachmentRepository.deleteAllByResume(resume);
+        List<Attachment> attachments = new ArrayList<>();
+        for (MultipartFile file : files) {
+            attachments.add(uploadS3AndConvertAttachment(file));
+        }
+        return attachments;
     }
 
     //첨부파일 s3에서 삭제

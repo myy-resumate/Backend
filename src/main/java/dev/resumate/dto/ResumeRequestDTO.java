@@ -14,24 +14,24 @@ public class ResumeRequestDTO {
     public static class CreateDTO {
 
         private String title;
-        private List<String> tags;
+        private List<String> tags = new ArrayList<>();
         private String organization;
         private String orgURl;
         private LocalDate applyStart;
         private LocalDate applyEnd;
-        private List<CoverLetterDTO> coverLetterDTOS;
+        private List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();
     }
 
     @Getter
     public static class UpdateDTO {
 
         private String title;
-        private List<String> tags;
+        private List<String> tags = new ArrayList<>();
         private String organization;
         private String orgURl;
         private LocalDate applyStart;
         private LocalDate applyEnd;
-        private List<CoverLetterDTO> coverLetterDTOS;
+        private List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();
     }
 
     @Getter

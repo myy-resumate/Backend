@@ -45,11 +45,34 @@ public class Resume extends BaseTimeEntity {
     @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL)
     private List<Attachment> attachments = new ArrayList<>();
 
-    public void setResume(ResumeRequestDTO.UpdateDTO request) {
+    //지원서 수정
+    public void setResume(ResumeRequestDTO.UpdateDTO request, List<CoverLetter> coverLetters, List<Attachment> attachments) {
         this.title = request.getTitle();
         this.organization = request.getOrganization();
         this.orgUrl = request.getOrgURl();
         this.applyStart = request.getApplyStart();
         this.applyEnd = request.getApplyEnd();
+
+        //양쪽 모두 세팅
+        this.coverLetters = coverLetters;
+        for (CoverLetter coverLetter : coverLetters) {
+            coverLetter.setResume(this);
+        }
+        this.attachments = attachments;
+        for (Attachment attachment : attachments) {
+            attachment.setResume(this);
+        }
+    }
+
+    //양방향 편의 메소드
+    public void addCoverLetter(CoverLetter coverLetter) {
+        this.coverLetters.add(coverLetter);
+        coverLetter.setResume(this);
+    }
+
+    //양방향 편의 메소드
+    public void addAttachment(Attachment attachment) {
+        this.attachments.add(attachment);
+        attachment.setResume(this);
     }
 }

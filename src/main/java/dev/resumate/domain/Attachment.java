@@ -30,4 +30,8 @@ public class Attachment extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "resume_id")
     private Resume resume;
+
+    public void setResume(Resume resume) {
+        this.resume = resume;
+    }
 }

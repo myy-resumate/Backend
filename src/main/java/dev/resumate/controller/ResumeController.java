@@ -24,8 +24,6 @@ import java.util.List;
 public class ResumeController {
 
     private final ResumeService resumeService;
-    private final AttachmentService attachmentService;
-    private final ResumeRepository resumeRepository;
 
     /**
      * 지원서 저장
@@ -58,9 +56,16 @@ public class ResumeController {
         return ApiResponseDTO.onSuccess(resumeService.updateResume(member, resumeId, request, files));
     }
 
+    /**
+     * 지원서 삭제
+     *
+     * @param resumeId
+     * @return
+     */
     @DeleteMapping("/{resumeId}")
     public ApiResponseDTO<String> deleteResume(@PathVariable Long resumeId) {
         resumeService.deleteResume(resumeId);
         return ApiResponseDTO.onSuccess("지원서 삭제 성공");
     }
+
 }
