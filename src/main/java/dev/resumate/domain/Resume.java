@@ -45,6 +45,9 @@ public class Resume extends BaseTimeEntity {
     @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL)
     private List<Attachment> attachments = new ArrayList<>();
 
+    @OneToMany(mappedBy = "resume")
+    private List<Tagging> taggings = new ArrayList<>();
+
     //지원서 수정
     public void setResume(ResumeRequestDTO.UpdateDTO request, List<CoverLetter> coverLetters, List<Attachment> attachments) {
         this.title = request.getTitle();

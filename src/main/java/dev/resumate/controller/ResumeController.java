@@ -68,4 +68,13 @@ public class ResumeController {
         return ApiResponseDTO.onSuccess("지원서 삭제 성공");
     }
 
+    /**
+     * 지원서 조회
+     * @param resumeId
+     * @return
+     */
+    @GetMapping("/{resumeId}")
+    public ApiResponseDTO<ResumeResponseDTO.ReadResultDTO> readResume(@PathVariable Long resumeId) {
+        return ApiResponseDTO.onSuccess(resumeService.readResume(resumeId));
+    }
 }

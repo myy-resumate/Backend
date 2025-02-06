@@ -11,6 +11,10 @@ import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.dto.AttachmentDTO;
+import dev.resumate.repository.dto.CoverLetterDTO;
+import dev.resumate.repository.dto.ResumeDTO;
+import dev.resumate.repository.dto.TagDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +23,6 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -105,5 +108,25 @@ public class ResumeService {
         taggingService.deleteTagging(resume);
         //첨부파일 s3에서 삭제
         attachmentService.deleteFromS3(resume);
+    }
+
+    public ResumeResponseDTO.ReadResultDTO readResume(Long resumeId) {
+
+        ResumeDTO resumeDTOS = resumeRepository.findResume(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
+        List<CoverLetterDTO> coverLetterDTOS = resumeRepository.findCoverLetter(resumeId);
+        List<AttachmentDTO> attachmentDTOS = resumeRepository.findAttachment(resumeId);
+        List<TagDTO> tagDTOS = resumeRepository.findTag(resumeId);
+
+        return ResumeResponseDTO.ReadResultDTO.builder()
+                .title(resumeDTOS.getTitle())
+                .createdAt(resumeDTOS.getCreatedAt())
+                .org(resumeDTOS.getOrganization())
+                .orgUrl(resumeDTOS.getOrgUrl())
+                .applyStart(resumeDTOS.getApplyStart())
+                .applyEnd(resumeDTOS.getApplyEnd())
+                .coverLetters(coverLetterDTOS)
+                .attachments(attachmentDTOS)
+                .tags(tagDTOS)
+                .build();
     }
 }
