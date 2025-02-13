@@ -5,7 +5,9 @@ import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.dto.HomeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.dto.DeadlineDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -30,6 +32,21 @@ public class HomeService {
 
         return HomeResponseDTO.CalendarDTO.builder()
                 .dateDTOS(HomeConverter.toDateDTO(resumes))
+                .build();
+    }
+
+    /**
+     * 마감 공고 조회
+     * @param member
+     * @return
+     */
+    public HomeResponseDTO.DeadlineListDTO getDeadline(Member member) {
+
+        //상위 5개만 조회하기 위한 PageRequest 구현체
+        List<DeadlineDTO> deadlineDTOS = resumeRepository.findDeadlineResume(member, LocalDate.now(), PageRequest.of(0, 5));
+
+        return HomeResponseDTO.DeadlineListDTO.builder()
+                .deadlineDTOS(HomeConverter.toDeadlineDTO(deadlineDTOS))
                 .build();
     }
 }

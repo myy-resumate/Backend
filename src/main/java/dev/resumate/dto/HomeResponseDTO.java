@@ -27,4 +27,20 @@ public class HomeResponseDTO {
         private LocalDate applyEnd;
     }
 
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class DeadlineListDTO {
+
+        private List<DeadlineDTO> deadlineDTOS;
+    }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class DeadlineDTO {
+
+        private String organization;
+        private String orgUrl;
+    }
 }

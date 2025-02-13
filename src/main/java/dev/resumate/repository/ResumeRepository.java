@@ -3,10 +3,7 @@ package dev.resumate.repository;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeResponseDTO;
-import dev.resumate.repository.dto.AttachmentDTO;
-import dev.resumate.repository.dto.CoverLetterDTO;
-import dev.resumate.repository.dto.ResumeDTO;
-import dev.resumate.repository.dto.TagDTO;
+import dev.resumate.repository.dto.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
@@ -60,4 +57,11 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     //캘린더 조회
     @Query("select r from Resume r where r.member = :member and r.applyEnd between :start and :end")
     List<Resume> findResumeByApplyEndAndMember(@Param("member") Member member, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    //마감 공고 조회 - 중복 내용을 거르기 위해 dto로 받기
+    @Query("select distinct new dev.resumate.repository.dto.DeadlineDTO(r.organization, r.orgUrl) " +
+            "from Resume r " +
+            "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
+    List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
+
 }

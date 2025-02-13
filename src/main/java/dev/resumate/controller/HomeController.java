@@ -30,4 +30,14 @@ public class HomeController {
     public ApiResponseDTO<HomeResponseDTO.CalendarDTO> getCalendar(@AuthUser Member member, @RequestParam LocalDate startDate) {
         return ApiResponseDTO.onSuccess(homeService.getCalendar(member, startDate));
     }
+
+    /**
+     * 마감 공고 조회
+     * @param member
+     * @return
+     */
+    @GetMapping("/resumes/deadline")
+    public ApiResponseDTO<HomeResponseDTO.DeadlineListDTO> getDeadline(@AuthUser Member member) {
+        return ApiResponseDTO.onSuccess(homeService.getDeadline(member));
+    }
 }
