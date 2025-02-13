@@ -13,8 +13,10 @@ import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,6 +48,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "WHERE t.resume.id = :resumeId")
     List<TagDTO> findTag(@Param("resumeId") Long resumeId);
 
+    //지원서 목록 조회
     @Query("select distinct r " +
             "from Resume r " +
             "join r.coverLetters c " +
@@ -53,4 +56,8 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "join t.tag tag " +
             "where r.member = :member")
     Slice<Resume> findAllResume(@Param("member")Member member, Pageable pageable);
+
+    //캘린더 조회
+    @Query("select r from Resume r where r.member = :member and r.applyEnd between :start and :end")
+    List<Resume> findResumeByApplyEndAndMember(@Param("member") Member member, @Param("start") LocalDate start, @Param("end") LocalDate end);
 }
