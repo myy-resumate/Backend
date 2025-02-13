@@ -56,4 +56,19 @@ public class ResumeResponseDTO {
         //자소서
         private List<CoverLetterDTO> coverLetters;
     }
+
+    @Getter
+    @Builder
+    @AllArgsConstructor
+    public static class ReadThumbnailDTO {
+
+        private Long resumeId;
+        private String title;
+        private LocalDate createDate;
+        private String organization;
+        private String preview;
+        private List<TagDTO> tags;
+    }
+
+
 }

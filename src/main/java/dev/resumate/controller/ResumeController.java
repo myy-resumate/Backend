@@ -12,6 +12,8 @@ import dev.resumate.repository.ResumeRepository;
 import dev.resumate.service.AttachmentService;
 import dev.resumate.service.ResumeService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -69,12 +71,17 @@ public class ResumeController {
     }
 
     /**
-     * 지원서 조회
+     * 지원서 상세 조회
      * @param resumeId
      * @return
      */
     @GetMapping("/{resumeId}")
     public ApiResponseDTO<ResumeResponseDTO.ReadResultDTO> readResume(@PathVariable Long resumeId) {
         return ApiResponseDTO.onSuccess(resumeService.readResume(resumeId));
+    }
+
+    @GetMapping
+    public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> readResumeList(@AuthUser Member member, Pageable pageable) {  //Pageable 구현체를 생성할 필요 없이 그냥 파라미터로 받을 수 있다. spring data jpa
+        return ApiResponseDTO.onSuccess(resumeService.readResumeList(member, pageable));
     }
 }

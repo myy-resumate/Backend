@@ -1,10 +1,14 @@
 package dev.resumate.repository;
 
+import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
+import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
 import dev.resumate.repository.dto.TagDTO;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -36,10 +40,17 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     List<AttachmentDTO> findAttachment(@Param("resumeId") Long resumeId);
 
     //자식(태그) 조회
-    @Query("SELECT new dev.resumate.repository.dto.TagDTO(t.name) " +
-            "FROM Tag t " +
-            "JOIN FETCH Tagging tagging " +
-            "ON t = tagging.tag " +
-            "WHERE tagging.resume.id = :resumeId")
+    @Query("SELECT new dev.resumate.repository.dto.TagDTO(tag.name) " +
+            "FROM Tag tag " +
+            "JOIN tag.taggings t " +  //dto를 받을 땐 join fetch 사용 못함. 어차피 tagging에 조회할 필드가 없으니 괜찮다.
+            "WHERE t.resume.id = :resumeId")
     List<TagDTO> findTag(@Param("resumeId") Long resumeId);
+
+    @Query("select distinct r " +
+            "from Resume r " +
+            "join r.coverLetters c " +
+            "join r.taggings t " +
+            "join t.tag tag " +
+            "where r.member = :member")
+    Slice<Resume> findAllResume(@Param("member")Member member, Pageable pageable);
 }
