@@ -23,6 +23,10 @@ public enum ErrorCode {
     MEMBER_JWT_TOKEN_INVALID(HttpStatus.BAD_REQUEST, "MEMBER402", "유효하지 않은 토큰입니다."),
     MEMBER_JWT_TOKEN_NULL(HttpStatus.BAD_REQUEST, "MEMBER403", "토큰이 존재하지 않습니다."),
 
+    //Resume 관련
+    RESUME_NOT_FOUND(HttpStatus.NOT_FOUND, "RESUME400", "지원서가 존재하지 않습니다."),
+
+
     ;
 
 
