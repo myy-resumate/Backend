@@ -28,14 +28,14 @@ public class ResumeConverter {
                 .build();
     }
 
-    public static ResumeResponseDTO.ReadResultDTO toReadResultDTO(ResumeDTO resumeDTO, List<CoverLetterDTO> coverLetterDTOS, List<AttachmentDTO> attachmentDTOS, List<TagDTO> tagDTOS) {
+    public static ResumeResponseDTO.ReadResultDTO toReadResultDTO(Resume resume, List<CoverLetterDTO> coverLetterDTOS, List<AttachmentDTO> attachmentDTOS, List<TagDTO> tagDTOS) {
         return ResumeResponseDTO.ReadResultDTO.builder()
-                .title(resumeDTO.getTitle())
-                .createdAt(resumeDTO.getCreatedAt())
-                .org(resumeDTO.getOrganization())
-                .orgUrl(resumeDTO.getOrgUrl())
-                .applyStart(resumeDTO.getApplyStart())
-                .applyEnd(resumeDTO.getApplyEnd())
+                .title(resume.getTitle())
+                .createdAt(resume.getCreatedAt())
+                .org(resume.getOrganization())
+                .orgUrl(resume.getOrgUrl())
+                .applyStart(resume.getApplyStart())
+                .applyEnd(resume.getApplyEnd())
                 .coverLetters(coverLetterDTOS)
                 .attachments(attachmentDTOS)
                 .tags(tagDTOS)
@@ -47,13 +47,17 @@ public class ResumeConverter {
         String preview = "지원처: " + resume.getOrganization() + "\n지원처 링크: " + resume.getOrgUrl() +
                 "\n자소서:" + resume.getCoverLetters().get(0).getQuestion();
 
-        return ResumeResponseDTO.ReadThumbnailDTO.builder()
+        ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeResponseDTO.ReadThumbnailDTO.builder()
                 .resumeId(resume.getId())
                 .title(resume.getTitle())
                 .createDate(resume.getCreatedAt().toLocalDate())
                 .organization(resume.getOrganization())
                 .preview(preview)
-                .tags(tagDTOS)
                 .build();
+
+        if (tagDTOS != null) {
+            thumbnailDTO.setTags(tagDTOS);
+        }
+        return thumbnailDTO;
     }
 }

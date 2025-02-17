@@ -1,7 +1,9 @@
 package dev.resumate.service;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
+import dev.resumate.common.redis.RedisUtil;
 import dev.resumate.converter.CoverLetterConverter;
 import dev.resumate.converter.ResumeConverter;
 import dev.resumate.domain.*;
@@ -35,6 +37,7 @@ public class ResumeService {
     private final AttachmentService attachmentService;
     private final TaggingService taggingService;
     private final CoverLetterService coverLetterService;
+    private final HomeService homeService;
 
     /**
      * 지원서 저장
@@ -66,6 +69,9 @@ public class ResumeService {
         //태그 저장은 따로
         tagService.saveTag(request.getTags(), member, newResume);
 
+        //redis에 최근 본 지원서로 저장
+        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
+
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
                 .build();
@@ -95,6 +101,9 @@ public class ResumeService {
             tagService.updateTag(request.getTags(), member, resume);
         }
 
+        //redis에 최근 본 지원서로 저장
+        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), resume, member);
+
         return ResumeResponseDTO.UpdateResultDTO.builder()
                 .resumeId(resume.getId())
                 .build();
@@ -112,14 +121,18 @@ public class ResumeService {
     }
 
     //지원서 상세 조회
-    public ResumeResponseDTO.ReadResultDTO readResume(Long resumeId) {
+    public ResumeResponseDTO.ReadResultDTO readResume(Member member, Long resumeId) throws JsonProcessingException {
 
-        ResumeDTO resumeDTO = resumeRepository.findResume(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
+        //ResumeDTO resumeDTO = resumeRepository.findResume(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
+        Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         List<CoverLetterDTO> coverLetterDTOS = resumeRepository.findCoverLetter(resumeId);
         List<AttachmentDTO> attachmentDTOS = resumeRepository.findAttachment(resumeId);
         List<TagDTO> tagDTOS = resumeRepository.findTag(resumeId);
 
-        return ResumeConverter.toReadResultDTO(resumeDTO, coverLetterDTOS, attachmentDTOS, tagDTOS);
+        //redis에 최근 본 지원서로 저장
+        homeService.addRecentResume(tagDTOS, resume, member);
+
+        return ResumeConverter.toReadResultDTO(resume, coverLetterDTOS, attachmentDTOS, tagDTOS);
     }
 
     //지원서 목록 조회
