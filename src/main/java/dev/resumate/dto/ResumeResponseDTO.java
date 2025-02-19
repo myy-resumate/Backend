@@ -68,6 +68,10 @@ public class ResumeResponseDTO {
         private String organization;
         private String preview;
         private List<TagDTO> tags;
+
+        public void setTags(List<TagDTO> tags) {
+            this.tags = tags;
+        }
     }
 
 

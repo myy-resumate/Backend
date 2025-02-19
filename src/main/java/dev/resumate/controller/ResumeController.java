@@ -1,5 +1,6 @@
 package dev.resumate.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.apiPayload.response.ApiResponseDTO;
@@ -76,10 +77,16 @@ public class ResumeController {
      * @return
      */
     @GetMapping("/{resumeId}")
-    public ApiResponseDTO<ResumeResponseDTO.ReadResultDTO> readResume(@PathVariable Long resumeId) {
-        return ApiResponseDTO.onSuccess(resumeService.readResume(resumeId));
+    public ApiResponseDTO<ResumeResponseDTO.ReadResultDTO> readResume(@AuthUser Member member, @PathVariable Long resumeId) throws JsonProcessingException {
+        return ApiResponseDTO.onSuccess(resumeService.readResume(member, resumeId));
     }
 
+    /**
+     * 지원서 목록 조회
+     * @param member
+     * @param pageable
+     * @return
+     */
     @GetMapping
     public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> readResumeList(@AuthUser Member member, Pageable pageable) {  //Pageable 구현체를 생성할 필요 없이 그냥 파라미터로 받을 수 있다. spring data jpa
         return ApiResponseDTO.onSuccess(resumeService.readResumeList(member, pageable));

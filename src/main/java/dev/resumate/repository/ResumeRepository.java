@@ -3,18 +3,17 @@ package dev.resumate.repository;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeResponseDTO;
-import dev.resumate.repository.dto.AttachmentDTO;
-import dev.resumate.repository.dto.CoverLetterDTO;
-import dev.resumate.repository.dto.ResumeDTO;
-import dev.resumate.repository.dto.TagDTO;
+import dev.resumate.repository.dto.*;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,6 +45,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "WHERE t.resume.id = :resumeId")
     List<TagDTO> findTag(@Param("resumeId") Long resumeId);
 
+    //지원서 목록 조회
     @Query("select distinct r " +
             "from Resume r " +
             "join r.coverLetters c " +
@@ -53,4 +53,15 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "join t.tag tag " +
             "where r.member = :member")
     Slice<Resume> findAllResume(@Param("member")Member member, Pageable pageable);
+
+    //캘린더 조회
+    @Query("select r from Resume r where r.member = :member and r.applyEnd between :start and :end")
+    List<Resume> findResumeByApplyEndAndMember(@Param("member") Member member, @Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    //마감 공고 조회 - 중복 내용을 거르기 위해 dto로 받기
+    @Query("select distinct new dev.resumate.repository.dto.DeadlineDTO(r.organization, r.orgUrl) " +
+            "from Resume r " +
+            "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
+    List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
+
 }
