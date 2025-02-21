@@ -64,4 +64,15 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
     List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
 
+
+    //태그로 검색 - 태그, 태깅에 인덱스 사용
+    @Query("select r from Resume r " +
+            "join r.taggings t " +
+            "join t.tag tag " +
+            "where tag.member = :member and tag.name in :tags " +
+            "group by r.id " +
+            "having count(distinct tag.id) = :tagCount")
+    Slice<Resume> findByTag(@Param("member") Member member, @Param("tags") List<String> tags, @Param("tagCount") int tagCount, Pageable pageable);
+
+
 }

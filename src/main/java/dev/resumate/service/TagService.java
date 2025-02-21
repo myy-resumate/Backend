@@ -21,7 +21,7 @@ public class TagService {
     public void saveTag(List<String> tags, Member member, Resume resume) {
 
         for (String tagName : tags) {
-            if (!tagRepository.existsByName(tagName)) {
+            if (!tagRepository.existsByNameAndMember(tagName, member)) {
                 Tag tag = Tag.builder()
                         .name(tagName)
                         .member(member)

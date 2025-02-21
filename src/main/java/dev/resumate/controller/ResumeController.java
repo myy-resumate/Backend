@@ -91,4 +91,16 @@ public class ResumeController {
     public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> readResumeList(@AuthUser Member member, Pageable pageable) {  //Pageable 구현체를 생성할 필요 없이 그냥 파라미터로 받을 수 있다. spring data jpa
         return ApiResponseDTO.onSuccess(resumeService.readResumeList(member, pageable));
     }
+
+    /**
+     * 태그로 검색
+     * @param tags
+     * @return
+     */
+    @GetMapping("/tags")
+    public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> searchResumesByTags(@AuthUser Member member,
+                                                                                         @RequestParam(name = "tags") List<String> tags,
+                                                                                         Pageable pageable) {
+        return ApiResponseDTO.onSuccess(resumeService.getResumesByTags(member, tags, pageable));
+    }
 }

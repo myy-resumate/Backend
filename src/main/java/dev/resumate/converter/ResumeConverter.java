@@ -8,9 +8,11 @@ import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
 import dev.resumate.repository.dto.TagDTO;
+import org.springframework.data.domain.Slice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ResumeConverter {
 
@@ -60,4 +62,17 @@ public class ResumeConverter {
         }
         return thumbnailDTO;
     }
+
+    public static Slice<ResumeResponseDTO.ReadThumbnailDTO> mapReadThumbnailDTO(Slice<Resume> resumes) {
+
+        return resumes.map(resume -> {
+            List<TagDTO> tagDTOS = resume.getTaggings().stream()
+                    .map(tagging -> TagDTO.builder()
+                            .tagName(tagging.getTag().getName())
+                            .build())
+                    .collect(Collectors.toList());
+            return ResumeConverter.toReadThumbnailDTO(resume, tagDTOS);
+        });
+    }
+
 }

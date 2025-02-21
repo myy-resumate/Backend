@@ -139,15 +139,14 @@ public class ResumeService {
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> readResumeList(Member member, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findAllResume(member, pageable);
-
-        return resumes.map(
-                resume -> {
-                    List<TagDTO> tagDTOS = resume.getTaggings().stream()
-                            .map(tagging -> TagDTO.builder()
-                                    .tagName(tagging.getTag().getName())
-                                    .build())
-                            .collect(Collectors.toList());
-                    return ResumeConverter.toReadThumbnailDTO(resume, tagDTOS);
-                });
+        return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
+
+    //태그 검색
+    public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByTags(Member member, List<String> tags, Pageable pageable) {
+
+        Slice<Resume> resumes = resumeRepository.findByTag(member, tags, tags.size(), pageable);
+        return ResumeConverter.mapReadThumbnailDTO(resumes);
+    }
+
 }

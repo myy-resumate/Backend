@@ -15,6 +15,9 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(indexes = {  //멤버 id와 태그명으로 인덱스
+        @Index(name = "tag_name_index", columnList = "member_id, name")
+})
 public class Tag extends BaseTimeEntity {
 
     @Id
