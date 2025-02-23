@@ -64,7 +64,6 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
     List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
 
-
     //태그로 검색 - 태그, 태깅에 인덱스 사용
     @Query("select r from Resume r " +
             "join r.taggings t " +
@@ -74,5 +73,19 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "having count(distinct tag.id) = :tagCount")
     Slice<Resume> findByTag(@Param("member") Member member, @Param("tags") List<String> tags, @Param("tagCount") int tagCount, Pageable pageable);
 
-
+    //지원서 검색
+    @Query(value = "select r.* " +
+            "from resume r " +
+            "where match(r.title, r.organization) " +
+            "against(:keyword in natural language mode) " +
+            "and r.member_id = :memberId " +
+            "union " +
+            "select r.* " +
+            "from resume r " +
+            "join cover_letter c on r.resume_id = c.resume_id " +
+            "where match(c.question, c.answer) " +
+            "against(:keyword in natural language mode) " +
+            "and r.member_id = :memberId;"
+            , nativeQuery = true)
+    Slice<Resume> findByKeyword(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
 }
