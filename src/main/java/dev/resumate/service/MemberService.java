@@ -6,6 +6,7 @@ import dev.resumate.common.redis.domain.RefreshToken;
 import dev.resumate.common.redis.repository.LogoutTokenRepository;
 import dev.resumate.common.redis.repository.RefreshTokenRepository;
 import dev.resumate.common.security.CustomUserDetails;
+import dev.resumate.common.security.CustomUserDetailsService;
 import dev.resumate.common.security.JwtTokenDTO;
 import dev.resumate.common.security.JwtUtil;
 import dev.resumate.converter.MemberConverter;
@@ -43,6 +44,7 @@ public class MemberService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final CookieUtil cookieUtil;
     private final LogoutTokenRepository logoutTokenRepository;
+    private final CustomUserDetailsService customUserDetailsService;
 
     /**
      * 회원가입
@@ -88,7 +90,9 @@ public class MemberService {
                 .memberId(member.getId())
                 .build();
         logoutTokenRepository.save(logoutToken);
-        refreshTokenRepository.deleteById(member.getId());
+
+        String refreshToken = cookieUtil.getCookie(COOKIE_NAME, request);
+        refreshTokenRepository.deleteById(refreshToken);
     }
 
     //role 추출
@@ -105,7 +109,7 @@ public class MemberService {
         JwtTokenDTO jwtTokenDTO = jwtUtil.generateToken(username, role);
 
         //redis에 refresh토큰 저장
-        saveRefreshToken(customUserDetails.getUserId(), jwtTokenDTO.getRefreshToken());
+        saveRefreshToken(jwtTokenDTO.getRefreshToken(), customUserDetails.getUserId(), username);
 
         //쿠키에 추가
         cookieUtil.addCookie(response, COOKIE_NAME, jwtTokenDTO.getRefreshToken(), COOKIE_MAX_AGE);
@@ -116,12 +120,44 @@ public class MemberService {
                 .build();
     }
 
-    private void saveRefreshToken(Long userId, String refreshToken) {
+    private void saveRefreshToken(String refreshToken, Long memberId, String email) {
 
         RefreshToken token = RefreshToken.builder()
-                .id(userId)
                 .refreshToken(refreshToken)
+                .memberId(memberId)
+                .email(email)
                 .build();
         refreshTokenRepository.save(token);
     }
+
+    /**
+     * 토큰 재발급
+     * @param request
+     * @param response
+     * @return
+     */
+    public MemberResponseDTO.TokenDTO reissueToken(HttpServletRequest request, HttpServletResponse response) {
+
+        //쿠키의 refresh토큰 꺼내고 검사
+        String refreshToken = cookieUtil.getCookie(COOKIE_NAME, request);
+        if (refreshToken == null) {
+            throw new BusinessBaseException(ErrorCode.MEMBER_JWT_TOKEN_NULL);
+        }
+
+        //꺼낸 토큰 자체의 유효성 검증
+        jwtUtil.validateToken(refreshToken);
+
+        //redis에 해당 토큰이 있는지 체크
+        RefreshToken redisRefreshToken = refreshTokenRepository.findById(refreshToken).orElseThrow(() -> new BusinessBaseException(ErrorCode.MEMBER_REDIS_TOKEN_NOT_FOUND));
+
+        //토큰 발급을 위한 customUserDetails 찾기
+        CustomUserDetails customUserDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(redisRefreshToken.getEmail());
+
+        //기존 refresh 토큰 삭제
+        refreshTokenRepository.deleteById(refreshToken);
+        //토큰 재발급
+        return createToken(customUserDetails, response);
+    }
+
+
 }
