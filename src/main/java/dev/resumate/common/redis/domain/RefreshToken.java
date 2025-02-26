@@ -13,6 +13,7 @@ import org.springframework.data.redis.core.RedisHash;
 public class RefreshToken {
 
     @Id
-    private Long id;  //member의 id
-    private String refreshToken;
+    private String refreshToken;  //재발급 요청할 때 refreshToken밖에 줄 수 있는 정보가 없기 때문에 refreshToken을 식별자로 지정
+    private Long memberId;
+    private String email;
 }
