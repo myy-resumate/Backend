@@ -26,6 +26,8 @@ public enum ErrorCode {
     //Resume 관련
     RESUME_NOT_FOUND(HttpStatus.NOT_FOUND, "RESUME400", "지원서가 존재하지 않습니다."),
 
+    //Tag 관련
+    TAG_IS_NULL(HttpStatus.BAD_REQUEST, "TAG400", "태그가 null입니다."),
 
     ;
 

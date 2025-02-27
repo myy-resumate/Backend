@@ -28,4 +28,8 @@ public class Tagging extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tag_id")
     private Tag tag;
+
+    public void setTag(Tag tag) {
+        this.tag = tag;
+    }
 }

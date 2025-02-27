@@ -39,7 +39,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     List<AttachmentDTO> findAttachment(@Param("resumeId") Long resumeId);
 
     //자식(태그) 조회
-    @Query("SELECT new dev.resumate.repository.dto.TagDTO(tag.name) " +
+    @Query("SELECT new dev.resumate.repository.dto.TagDTO(t.id, tag.name) " +
             "FROM Tag tag " +
             "JOIN tag.taggings t " +  //dto를 받을 땐 join fetch 사용 못함. 어차피 tagging에 조회할 필드가 없으니 괜찮다.
             "WHERE t.resume.id = :resumeId")

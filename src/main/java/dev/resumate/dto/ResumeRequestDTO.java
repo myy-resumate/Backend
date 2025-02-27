@@ -1,5 +1,6 @@
 package dev.resumate.dto;
 
+import dev.resumate.repository.dto.TagDTO;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -26,7 +27,7 @@ public class ResumeRequestDTO {
     public static class UpdateDTO {
 
         private String title;
-        private List<String> tags = new ArrayList<>();
+        private List<TagDTO> tags = new ArrayList<>();
         private String organization;
         private String orgURl;
         private LocalDate applyStart;
