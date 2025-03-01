@@ -46,8 +46,7 @@ public class ResumeConverter {
 
     public static ResumeResponseDTO.ReadThumbnailDTO toReadThumbnailDTO(Resume resume, List<TagDTO> tagDTOS) {
 
-        String preview = "지원처: " + resume.getOrganization() + "\n지원처 링크: " + resume.getOrgUrl() +
-                "\n자소서:" + resume.getCoverLetters().get(0).getQuestion();
+        String preview = "지원처: " + resume.getOrganization() + "\n지원처 링크: " + resume.getOrgUrl();
 
         ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeResponseDTO.ReadThumbnailDTO.builder()
                 .resumeId(resume.getId())

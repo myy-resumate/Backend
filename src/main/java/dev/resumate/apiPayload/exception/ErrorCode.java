@@ -27,8 +27,10 @@ public enum ErrorCode {
     RESUME_NOT_FOUND(HttpStatus.NOT_FOUND, "RESUME400", "지원서가 존재하지 않습니다."),
 
     //Tag 관련
-    TAG_IS_NULL(HttpStatus.BAD_REQUEST, "TAG400", "태그가 null입니다."),
+    TAG_IS_NULL(HttpStatus.BAD_REQUEST, "TAG400", "태그가 null 입니다."),
 
+    //CoverLetter 관련
+    COVER_LETTER_IS_NULL(HttpStatus.BAD_REQUEST, "COVER-LETTER400", "자소서가 null 입니다.")
     ;
 
 

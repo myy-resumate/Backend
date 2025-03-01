@@ -10,6 +10,7 @@ import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.TaggingRepository;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
@@ -33,7 +34,6 @@ import java.util.stream.Collectors;
 public class ResumeService {
 
     private final ResumeRepository resumeRepository;
-    private final TagService tagService;
     private final AttachmentService attachmentService;
     private final TaggingService taggingService;
     private final CoverLetterService coverLetterService;
@@ -67,7 +67,7 @@ public class ResumeService {
         Resume newResume = resumeRepository.save(resume);  //cascade로 저장
 
         //태그 저장은 따로
-        tagService.saveTag(request.getTags(), member, newResume);
+        taggingService.saveTagAndTagging(request.getTags(), member, newResume);
 
         //redis에 최근 본 지원서로 저장
         homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
@@ -82,12 +82,8 @@ public class ResumeService {
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
 
-        //자소서 삭제 후 리스트 새로 생성
-        coverLetterService.deleteCoverLetters(resume);
-        List<CoverLetter> coverLetters = new ArrayList<>();
-        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
-            coverLetters.add(CoverLetterConverter.toCoverLetter(coverLetterDTO));
-        }
+        //자소서 수정
+        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);
 
         //첨부파일 수정
         List<Attachment> attachments = new ArrayList<>();
@@ -95,12 +91,9 @@ public class ResumeService {
             attachments = attachmentService.updateFile(files, resume);
         }
 
-        resume.setResume(request, coverLetters, attachments);  //cascade로 저장
+        resume.setResume(request, attachments);  //cascade로 저장
 
         //태그 수정
-        if (request.getTags() == null) {  //요청 dto에 validation 추가하기
-            throw new BusinessBaseException(ErrorCode.TAG_IS_NULL);
-        }
         taggingService.updateTagging(request.getTags(), member, resume);
 
         //redis에 최근 본 지원서로 저장

@@ -32,4 +32,8 @@ public class Tagging extends BaseTimeEntity {
     public void setTag(Tag tag) {
         this.tag = tag;
     }
+
+    public void setResume(Resume resume) {
+        this.resume = resume;
+    }
 }

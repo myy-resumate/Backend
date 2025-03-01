@@ -27,7 +27,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     Optional<ResumeDTO> findResume(@Param("resumeId") Long resumeId);
 
     //자식(자소서) 조회
-    @Query("SELECT new dev.resumate.repository.dto.CoverLetterDTO(c.question, c.answer) " +
+    @Query("SELECT new dev.resumate.repository.dto.CoverLetterDTO(c.id, c.question, c.answer) " +
             "From CoverLetter c " +
             "WHERE c.resume.id = :resumeId")
     List<CoverLetterDTO> findCoverLetter(@Param("resumeId") Long resumeId);

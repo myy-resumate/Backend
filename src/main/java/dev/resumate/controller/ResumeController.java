@@ -7,6 +7,7 @@ import dev.resumate.domain.Member;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.service.ResumeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -49,7 +50,7 @@ public class ResumeController {
     @PatchMapping("/{resumeId}")
     public ApiResponseDTO<ResumeResponseDTO.UpdateResultDTO> updateResume(@AuthUser Member member,
                                                                           @PathVariable Long resumeId,
-                                                                          @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request,
+                                                                          @Valid @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request,
                                                                           @RequestPart(value = "files", required = false) List<MultipartFile> files) throws IOException {
         return ApiResponseDTO.onSuccess(resumeService.updateResume(member, resumeId, request, files));
     }

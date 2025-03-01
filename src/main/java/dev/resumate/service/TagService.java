@@ -22,16 +22,4 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TagService {
 
-    private final TaggingService taggingService;
-
-    @Transactional
-    public void saveTag(List<String> tags, Member member, Resume resume) {
-
-        for (String tagName : tags) {
-            Tag tag = taggingService.saveTag(tagName, member);
-            taggingService.saveTagging(resume, tag);
-        }
-    }
-
-
 }

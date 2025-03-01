@@ -26,6 +26,16 @@ public class TaggingService {
     private final TaggingRepository taggingRepository;
     private final TagRepository tagRepository;
 
+    //태그, 태깅 저장
+    @Transactional
+    public void saveTagAndTagging(List<String> tags, Member member, Resume resume) {
+
+        for (String tagName : tags) {
+            Tag tag = saveTag(tagName, member);
+            saveTagging(resume, tag);
+        }
+    }
+
     @Transactional
     public void deleteTagging(Resume resume) {
         taggingRepository.deleteAllByResume(resume);
@@ -55,7 +65,11 @@ public class TaggingService {
             }
         }
 
+        //양방향 매핑된 resume의 tagging리스트에서도 요소 삭제
+        resume.getTaggings().removeIf(tagging -> taggingIdsToDelete.contains(tagging.getId()));
+        //set에 남아있는 tagging들 삭제
         taggingRepository.deleteAllById(taggingIdsToDelete);
+        System.out.println("========================"+resume.getTaggings().size());
     }
 
     //이미 있으면 태그 반환, 없으면 저장
@@ -73,9 +87,9 @@ public class TaggingService {
     public void saveTagging(Resume resume, Tag tag) {
 
         Tagging tagging = Tagging.builder()
-                .resume(resume)
                 .tag(tag)
                 .build();
+        resume.addTagging(tagging);  //양방향 편의 메소드
         taggingRepository.save(tagging);
     }
 }
