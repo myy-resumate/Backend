@@ -47,14 +47,13 @@ public class ResumeConverter {
 
     public static ResumeResponseDTO.ReadThumbnailDTO toReadThumbnailDTO(Resume resume, List<TagDTO> tagDTOS) {
 
-        String preview = "지원처: " + resume.getOrganization() + "\n지원처 링크: " + resume.getOrgUrl();
-
         ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeResponseDTO.ReadThumbnailDTO.builder()
                 .resumeId(resume.getId())
                 .title(resume.getTitle())
                 .createDate(resume.getCreatedAt().toLocalDate())
                 .organization(resume.getOrganization())
-                .preview(preview)
+                .applyStart(resume.getApplyStart())
+                .applyEnd(resume.getApplyEnd())
                 .build();
 
         if (tagDTOS != null) {
@@ -68,6 +67,7 @@ public class ResumeConverter {
         return resumes.map(resume -> {
             List<TagDTO> tagDTOS = resume.getTaggings().stream()
                     .map(tagging -> TagDTO.builder()
+                            .taggingId(tagging.getId())
                             .tagName(tagging.getTag().getName())
                             .build())
                     .collect(Collectors.toList());
