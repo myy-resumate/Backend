@@ -30,7 +30,12 @@ public enum ErrorCode {
     TAG_IS_NULL(HttpStatus.BAD_REQUEST, "TAG400", "태그가 null 입니다."),
 
     //CoverLetter 관련
-    COVER_LETTER_IS_NULL(HttpStatus.BAD_REQUEST, "COVER-LETTER400", "자소서가 null 입니다.")
+    COVER_LETTER_IS_NULL(HttpStatus.BAD_REQUEST, "COVER-LETTER400", "자소서가 null 입니다."),
+
+    //파일 관련
+    FILE_NAME_IS_NULL(HttpStatus.BAD_REQUEST, "FILE400", "파일 이름이 없습니다."),
+    FILE_EXTENSION_INVALID(HttpStatus.BAD_REQUEST, "FILE401", "파일 확장자가 유효하지 않습니다."),
+
     ;
 
 

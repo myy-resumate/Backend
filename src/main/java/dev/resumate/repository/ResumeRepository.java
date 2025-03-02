@@ -33,7 +33,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     List<CoverLetterDTO> findCoverLetter(@Param("resumeId") Long resumeId);
 
     //자식(첨부 파일) 조회
-    @Query("SELECT new dev.resumate.repository.dto.AttachmentDTO(a.fileName, a.url) " +
+    @Query("SELECT new dev.resumate.repository.dto.AttachmentDTO(a.id, a.fileName, a.url) " +
             "FROM Attachment a " +
             "WHERE a.resume.id = :resumeId")
     List<AttachmentDTO> findAttachment(@Param("resumeId") Long resumeId);

@@ -69,7 +69,6 @@ public class TaggingService {
         resume.getTaggings().removeIf(tagging -> taggingIdsToDelete.contains(tagging.getId()));
         //set에 남아있는 tagging들 삭제
         taggingRepository.deleteAllById(taggingIdsToDelete);
-        System.out.println("========================"+resume.getTaggings().size());
     }
 
     //이미 있으면 태그 반환, 없으면 저장

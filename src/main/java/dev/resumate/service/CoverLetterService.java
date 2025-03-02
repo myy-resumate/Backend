@@ -59,7 +59,6 @@ public class CoverLetterService {
         CoverLetter newCoverLetter = CoverLetter.builder()
                 .question(coverLetterDTO.getQuestion())
                 .answer(coverLetterDTO.getAnswer())
-                .resume(resume)
                 .build();
 
         resume.addCoverLetter(newCoverLetter);

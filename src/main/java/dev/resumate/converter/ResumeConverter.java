@@ -27,6 +27,7 @@ public class ResumeConverter {
                 .member(member)
                 .coverLetters(new ArrayList<>())  //빌더패턴은 @AllArgsConstructor로 생성하기 때문에 필드에서 초기화한게 무시된다. 다시 세팅해야함
                 .attachments(new ArrayList<>())
+                .taggings(new ArrayList<>())
                 .build();
     }
 

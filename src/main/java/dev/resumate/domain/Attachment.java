@@ -34,4 +34,8 @@ public class Attachment extends BaseTimeEntity {
     public void setResume(Resume resume) {
         this.resume = resume;
     }
+
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
 }

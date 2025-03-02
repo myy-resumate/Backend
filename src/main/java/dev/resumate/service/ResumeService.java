@@ -59,7 +59,7 @@ public class ResumeService {
         //첨부파일 추가
         if (files != null) {
             for (MultipartFile file : files) {
-                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file);
+                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file, resume.getTitle());
                 resume.addAttachment(attachment);
             }
         }
@@ -82,19 +82,10 @@ public class ResumeService {
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
 
-        //자소서 수정
-        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);
-
-        //첨부파일 수정
-        List<Attachment> attachments = new ArrayList<>();
-        if (files != null) {
-            attachments = attachmentService.updateFile(files, resume);
-        }
-
-        resume.setResume(request, attachments);  //cascade로 저장
-
-        //태그 수정
-        taggingService.updateTagging(request.getTags(), member, resume);
+        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
+        attachmentService.updateFiles(files, resume);  //첨부 파일 수정
+        resume.setResume(request);  //지원서 수정
+        taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
 
         //redis에 최근 본 지원서로 저장
         homeService.addRecentResume(request.getTags(), resume, member);

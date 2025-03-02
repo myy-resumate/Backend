@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -42,24 +43,19 @@ public class Resume extends BaseTimeEntity {
     @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL, orphanRemoval = true)  //자식 리스트에서 삭제된 자식은 고아객체가 되어 db에서도 삭제된다.
     private List<CoverLetter> coverLetters = new ArrayList<>();
 
-    @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL)
+    @OneToMany(mappedBy = "resume", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Attachment> attachments = new ArrayList<>();
 
     @OneToMany(mappedBy = "resume")
     private List<Tagging> taggings = new ArrayList<>();  //목록 조회에서 태깅 조회가 필요해서 어쩔 수 없이 양방향 매핑
 
     //지원서 수정
-    public void setResume(ResumeRequestDTO.UpdateDTO request, List<Attachment> attachments) {
+    public void setResume(ResumeRequestDTO.UpdateDTO request) {
         this.title = request.getTitle();
         this.organization = request.getOrganization();
         this.orgUrl = request.getOrgURl();
         this.applyStart = request.getApplyStart();
         this.applyEnd = request.getApplyEnd();
-
-        this.attachments = attachments;
-        for (Attachment attachment : attachments) {
-            attachment.setResume(this);
-        }
     }
 
     //양방향 편의 메소드 - 자소서
@@ -68,7 +64,7 @@ public class Resume extends BaseTimeEntity {
         coverLetter.setResume(this);
     }
 
-    //양방향 편의 메소드 - 첨부파일
+    //양방향 편의 메소드 - 첨부 파일
     public void addAttachment(Attachment attachment) {
         this.attachments.add(attachment);
         attachment.setResume(this);
@@ -76,6 +72,7 @@ public class Resume extends BaseTimeEntity {
 
     //양방향 편의 메소드 - 태깅
     public void addTagging(Tagging tagging) {
+        System.out.println(this.taggings.size());
         this.taggings.add(tagging);
         tagging.setResume(this);
     }
