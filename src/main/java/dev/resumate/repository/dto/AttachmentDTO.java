@@ -7,6 +7,7 @@ import lombok.Getter;
 @AllArgsConstructor
 public class AttachmentDTO {
 
+    private Long attachmentId;
     private String fileName;
     private String url;
 }

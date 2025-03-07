@@ -27,19 +27,19 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     Optional<ResumeDTO> findResume(@Param("resumeId") Long resumeId);
 
     //자식(자소서) 조회
-    @Query("SELECT new dev.resumate.repository.dto.CoverLetterDTO(c.question, c.answer) " +
+    @Query("SELECT new dev.resumate.repository.dto.CoverLetterDTO(c.id, c.question, c.answer) " +
             "From CoverLetter c " +
             "WHERE c.resume.id = :resumeId")
     List<CoverLetterDTO> findCoverLetter(@Param("resumeId") Long resumeId);
 
     //자식(첨부 파일) 조회
-    @Query("SELECT new dev.resumate.repository.dto.AttachmentDTO(a.fileName, a.url) " +
+    @Query("SELECT new dev.resumate.repository.dto.AttachmentDTO(a.id, a.fileName, a.url) " +
             "FROM Attachment a " +
             "WHERE a.resume.id = :resumeId")
     List<AttachmentDTO> findAttachment(@Param("resumeId") Long resumeId);
 
     //자식(태그) 조회
-    @Query("SELECT new dev.resumate.repository.dto.TagDTO(tag.name) " +
+    @Query("SELECT new dev.resumate.repository.dto.TagDTO(t.id, tag.name) " +
             "FROM Tag tag " +
             "JOIN tag.taggings t " +  //dto를 받을 땐 join fetch 사용 못함. 어차피 tagging에 조회할 필드가 없으니 괜찮다.
             "WHERE t.resume.id = :resumeId")
@@ -64,4 +64,28 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
     List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
 
+    //태그로 검색 - 태그, 태깅에 인덱스 사용
+    @Query("select r from Resume r " +
+            "join r.taggings t " +
+            "join t.tag tag " +
+            "where tag.member = :member and tag.name in :tags " +
+            "group by r.id " +
+            "having count(distinct tag.id) = :tagCount")
+    Slice<Resume> findByTag(@Param("member") Member member, @Param("tags") List<String> tags, @Param("tagCount") int tagCount, Pageable pageable);
+
+    //지원서 검색
+    @Query(value = "select r.* " +
+            "from resume r " +
+            "where match(r.title, r.organization) " +
+            "against(:keyword in natural language mode) " +
+            "and r.member_id = :memberId " +
+            "union " +
+            "select r.* " +
+            "from resume r " +
+            "join cover_letter c on r.resume_id = c.resume_id " +
+            "where match(c.question, c.answer) " +
+            "against(:keyword in natural language mode) " +
+            "and r.member_id = :memberId;"
+            , nativeQuery = true)
+    Slice<Resume> findByKeyword(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
 }

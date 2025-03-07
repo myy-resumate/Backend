@@ -10,6 +10,7 @@ import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.TaggingRepository;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
@@ -33,7 +34,6 @@ import java.util.stream.Collectors;
 public class ResumeService {
 
     private final ResumeRepository resumeRepository;
-    private final TagService tagService;
     private final AttachmentService attachmentService;
     private final TaggingService taggingService;
     private final CoverLetterService coverLetterService;
@@ -59,7 +59,7 @@ public class ResumeService {
         //첨부파일 추가
         if (files != null) {
             for (MultipartFile file : files) {
-                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file);
+                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file, resume.getTitle());
                 resume.addAttachment(attachment);
             }
         }
@@ -67,7 +67,7 @@ public class ResumeService {
         Resume newResume = resumeRepository.save(resume);  //cascade로 저장
 
         //태그 저장은 따로
-        tagService.saveTag(request.getTags(), member, newResume);
+        taggingService.saveTagAndTagging(request.getTags(), member, newResume);
 
         //redis에 최근 본 지원서로 저장
         homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
@@ -77,32 +77,18 @@ public class ResumeService {
                 .build();
     }
 
+    //지원서 수정
     @Transactional
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
 
-        //자소서 삭제 후 리스트 새로 생성
-        coverLetterService.deleteCoverLetters(resume);
-        List<CoverLetter> coverLetters = new ArrayList<>();
-        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
-            coverLetters.add(CoverLetterConverter.toCoverLetter(coverLetterDTO));
-        }
-
-        //첨부파일 수정
-        List<Attachment> attachments = new ArrayList<>();
-        if (files != null) {
-            attachments = attachmentService.updateFile(files, resume);
-        }
-
-        resume.setResume(request, coverLetters, attachments);  //cascade로 저장
-
-        //태그 수정
-        if (request.getTags() != null) {
-            tagService.updateTag(request.getTags(), member, resume);
-        }
+        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
+        attachmentService.updateFiles(files, resume);  //첨부 파일 수정
+        resume.setResume(request);  //지원서 수정
+        taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), resume, member);
+        homeService.addRecentResume(request.getTags(), resume, member);
 
         return ResumeResponseDTO.UpdateResultDTO.builder()
                 .resumeId(resume.getId())
@@ -123,7 +109,6 @@ public class ResumeService {
     //지원서 상세 조회
     public ResumeResponseDTO.ReadResultDTO readResume(Member member, Long resumeId) throws JsonProcessingException {
 
-        //ResumeDTO resumeDTO = resumeRepository.findResume(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         List<CoverLetterDTO> coverLetterDTOS = resumeRepository.findCoverLetter(resumeId);
         List<AttachmentDTO> attachmentDTOS = resumeRepository.findAttachment(resumeId);
@@ -139,15 +124,20 @@ public class ResumeService {
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> readResumeList(Member member, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findAllResume(member, pageable);
+        return ResumeConverter.mapReadThumbnailDTO(resumes);
+    }
 
-        return resumes.map(
-                resume -> {
-                    List<TagDTO> tagDTOS = resume.getTaggings().stream()
-                            .map(tagging -> TagDTO.builder()
-                                    .tagName(tagging.getTag().getName())
-                                    .build())
-                            .collect(Collectors.toList());
-                    return ResumeConverter.toReadThumbnailDTO(resume, tagDTOS);
-                });
+    //태그로 검색
+    public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByTags(Member member, List<String> tags, Pageable pageable) {
+
+        Slice<Resume> resumes = resumeRepository.findByTag(member, tags, tags.size(), pageable);
+        return ResumeConverter.mapReadThumbnailDTO(resumes);
+    }
+
+    //지원서 검색
+    public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
+
+        Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);
+        return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 }

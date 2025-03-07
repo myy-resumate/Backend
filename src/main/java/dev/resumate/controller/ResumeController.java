@@ -1,17 +1,13 @@
 package dev.resumate.controller;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import dev.resumate.apiPayload.exception.BusinessBaseException;
-import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.apiPayload.response.ApiResponseDTO;
 import dev.resumate.common.auth.AuthUser;
 import dev.resumate.domain.Member;
-import dev.resumate.domain.Resume;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
-import dev.resumate.repository.ResumeRepository;
-import dev.resumate.service.AttachmentService;
 import dev.resumate.service.ResumeService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
@@ -54,7 +50,7 @@ public class ResumeController {
     @PatchMapping("/{resumeId}")
     public ApiResponseDTO<ResumeResponseDTO.UpdateResultDTO> updateResume(@AuthUser Member member,
                                                                           @PathVariable Long resumeId,
-                                                                          @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request,
+                                                                          @Valid @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request,
                                                                           @RequestPart(value = "files", required = false) List<MultipartFile> files) throws IOException {
         return ApiResponseDTO.onSuccess(resumeService.updateResume(member, resumeId, request, files));
     }
@@ -90,5 +86,31 @@ public class ResumeController {
     @GetMapping
     public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> readResumeList(@AuthUser Member member, Pageable pageable) {  //Pageable 구현체를 생성할 필요 없이 그냥 파라미터로 받을 수 있다. spring data jpa
         return ApiResponseDTO.onSuccess(resumeService.readResumeList(member, pageable));
+    }
+
+    /**
+     * 태그로 검색
+     * @param tags
+     * @return
+     */
+    @GetMapping("/tags")
+    public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> searchResumesByTags(@AuthUser Member member,
+                                                                                         @RequestParam(name = "tags") List<String> tags,
+                                                                                         Pageable pageable) {
+        return ApiResponseDTO.onSuccess(resumeService.getResumesByTags(member, tags, pageable));
+    }
+
+    /**
+     * 키워드로 지원서 검색
+     * @param member
+     * @param keyword
+     * @param pageable
+     * @return
+     */
+    @GetMapping("/search")
+    public ApiResponseDTO<Slice<ResumeResponseDTO.ReadThumbnailDTO>> searchResumesByKeyword(@AuthUser Member member,
+                                                                                            @RequestParam(name = "keyword") String keyword,
+                                                                                            Pageable pageable) {
+        return ApiResponseDTO.onSuccess(resumeService.getResumesByKeyword(member, keyword, pageable));
     }
 }

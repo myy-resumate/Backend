@@ -29,4 +29,10 @@ public class CoverLetter extends BaseTimeEntity {
     public void setResume(Resume resume) {
         this.resume = resume;
     }
+
+    public void setQuestionAndAnswer(String question, String answer) {
+
+        this.question = question;
+        this.answer = answer;
+    }
 }

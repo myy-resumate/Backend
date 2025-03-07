@@ -10,7 +10,5 @@ import java.util.List;
 @Repository
 public interface AttachmentRepository extends JpaRepository<Attachment, Long> {
 
-    void deleteAllByResume(Resume resume);
-
     List<Attachment> findAllByResume(Resume resume);
 }

@@ -66,7 +66,8 @@ public class ResumeResponseDTO {
         private String title;
         private LocalDate createDate;
         private String organization;
-        private String preview;
+        private LocalDate applyStart;
+        private LocalDate applyEnd;
         private List<TagDTO> tags;
 
         public void setTags(List<TagDTO> tags) {

@@ -3,7 +3,9 @@ package dev.resumate.service;
 import dev.resumate.common.s3.S3Util;
 import dev.resumate.converter.AttachmentConverter;
 import dev.resumate.domain.Attachment;
+import dev.resumate.domain.CoverLetter;
 import dev.resumate.domain.Resume;
+import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.repository.AttachmentRepository;
 import io.awspring.cloud.s3.ObjectMetadata;
 import io.awspring.cloud.s3.S3Operations;
@@ -16,9 +18,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -31,25 +33,42 @@ public class AttachmentService {
     private final AttachmentRepository attachmentRepository;
     private final S3Util s3Util;
 
-    public Attachment uploadS3AndConvertAttachment(MultipartFile file) throws IOException {
+    public Attachment uploadS3AndConvertAttachment(MultipartFile file, String resumeTitle) throws IOException {
 
-        String uploadKey = FOLDER + UUID.randomUUID() + "_" + file.getOriginalFilename();  //고유한 키 생성
+        String uploadKey = FOLDER + resumeTitle + UUID.randomUUID();  //고유한 키 생성
         S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
         return AttachmentConverter.toAttachment(s3Resource.getURL().toString(), uploadKey, file.getOriginalFilename());
     }
 
-    //s3, db에서 삭제 후, 다시 업로드, 저장
-    public List<Attachment> updateFile(List<MultipartFile> files, Resume resume) throws IOException{
+    //첨부파일 수정
+    @Transactional
+    public void updateFiles(List<MultipartFile> files, Resume resume) throws IOException{
 
-        //s3에서 삭제
-        deleteFromS3(resume);
+        List<Attachment> oldAttachments = attachmentRepository.findAllByResume(resume);
 
-        attachmentRepository.deleteAllByResume(resume);
-        List<Attachment> attachments = new ArrayList<>();
-        for (MultipartFile file : files) {
-            attachments.add(uploadS3AndConvertAttachment(file));
+        if (files == null) { //files가 null인 경우 그냥 삭제
+            oldAttachments.forEach(oldAttachment -> s3Util.deleteObject(oldAttachment.getUploadKey()));
+            resume.getAttachments().removeIf(oldAttachments::contains);
+        } else {
+            Iterator<MultipartFile> fileIterator = files.iterator();
+
+            for (Attachment oldAttachment : oldAttachments) {
+                if (fileIterator.hasNext()) {
+                    MultipartFile file = fileIterator.next();
+                    oldAttachment.setFileName(file.getOriginalFilename());
+                    s3Util.uploadObject(file, oldAttachment.getUploadKey());
+                } else {  //더 이상 바꿀 file이 없으면 남은 기존 파일은 삭제
+                    s3Util.deleteObject(oldAttachment.getUploadKey());
+                    resume.getAttachments().remove(oldAttachment);
+                }
+            }
+
+            //기존보다 추가된 file이 많은 경우
+            while (fileIterator.hasNext()) {
+                MultipartFile file = fileIterator.next();
+                resume.addAttachment(uploadS3AndConvertAttachment(file, resume.getTitle()));
+            }
         }
-        return attachments;
     }
 
     //첨부파일 s3에서 삭제

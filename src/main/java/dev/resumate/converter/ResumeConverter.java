@@ -8,9 +8,11 @@ import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
 import dev.resumate.repository.dto.TagDTO;
+import org.springframework.data.domain.Slice;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class ResumeConverter {
 
@@ -25,6 +27,7 @@ public class ResumeConverter {
                 .member(member)
                 .coverLetters(new ArrayList<>())  //빌더패턴은 @AllArgsConstructor로 생성하기 때문에 필드에서 초기화한게 무시된다. 다시 세팅해야함
                 .attachments(new ArrayList<>())
+                .taggings(new ArrayList<>())
                 .build();
     }
 
@@ -44,15 +47,13 @@ public class ResumeConverter {
 
     public static ResumeResponseDTO.ReadThumbnailDTO toReadThumbnailDTO(Resume resume, List<TagDTO> tagDTOS) {
 
-        String preview = "지원처: " + resume.getOrganization() + "\n지원처 링크: " + resume.getOrgUrl() +
-                "\n자소서:" + resume.getCoverLetters().get(0).getQuestion();
-
         ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeResponseDTO.ReadThumbnailDTO.builder()
                 .resumeId(resume.getId())
                 .title(resume.getTitle())
                 .createDate(resume.getCreatedAt().toLocalDate())
                 .organization(resume.getOrganization())
-                .preview(preview)
+                .applyStart(resume.getApplyStart())
+                .applyEnd(resume.getApplyEnd())
                 .build();
 
         if (tagDTOS != null) {
@@ -60,4 +61,18 @@ public class ResumeConverter {
         }
         return thumbnailDTO;
     }
+
+    public static Slice<ResumeResponseDTO.ReadThumbnailDTO> mapReadThumbnailDTO(Slice<Resume> resumes) {
+
+        return resumes.map(resume -> {
+            List<TagDTO> tagDTOS = resume.getTaggings().stream()
+                    .map(tagging -> TagDTO.builder()
+                            .taggingId(tagging.getId())
+                            .tagName(tagging.getTag().getName())
+                            .build())
+                    .collect(Collectors.toList());
+            return ResumeConverter.toReadThumbnailDTO(resume, tagDTOS);
+        });
+    }
+
 }
