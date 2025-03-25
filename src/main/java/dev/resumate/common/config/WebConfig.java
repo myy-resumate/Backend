@@ -1,5 +1,4 @@
-/*
-package dev.resumate.config;
+package dev.resumate.common.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -24,4 +23,3 @@ public class WebConfig implements WebMvcConfigurer {
         return source;
     }
 }
-*/

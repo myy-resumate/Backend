@@ -92,7 +92,7 @@ public class MemberService {
         logoutTokenRepository.save(logoutToken);
 
         String refreshToken = cookieUtil.getCookie(COOKIE_NAME, request);
-        refreshTokenRepository.deleteById(refreshToken);
+        refreshTokenRepository.deleteById("RefreshToken:" + refreshToken);
     }
 
     //role 추출
@@ -148,13 +148,13 @@ public class MemberService {
         jwtUtil.validateToken(refreshToken);
 
         //redis에 해당 토큰이 있는지 체크
-        RefreshToken redisRefreshToken = refreshTokenRepository.findById(refreshToken).orElseThrow(() -> new BusinessBaseException(ErrorCode.MEMBER_REDIS_TOKEN_NOT_FOUND));
+        RefreshToken redisRefreshToken = refreshTokenRepository.findById("RefreshToken:" + refreshToken).orElseThrow(() -> new BusinessBaseException(ErrorCode.MEMBER_REDIS_TOKEN_NOT_FOUND));
 
         //토큰 발급을 위한 customUserDetails 찾기
         CustomUserDetails customUserDetails = (CustomUserDetails) customUserDetailsService.loadUserByUsername(redisRefreshToken.getEmail());
 
         //기존 refresh 토큰 삭제
-        refreshTokenRepository.deleteById(refreshToken);
+        refreshTokenRepository.deleteById("RefreshToken:" + refreshToken);
         //토큰 재발급
         return createToken(customUserDetails, response);
     }

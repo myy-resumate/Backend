@@ -99,11 +99,11 @@ public class ResumeService {
     @Transactional
     public void deleteResume(Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
-        resumeRepository.deleteById(resumeId);
         //태깅은 cascade 안했으므로 따로 삭제
         taggingService.deleteTagging(resume);
         //첨부파일 s3에서 삭제
         attachmentService.deleteFromS3(resume);
+        resumeRepository.deleteById(resumeId);
     }
 
     //지원서 상세 조회
