@@ -59,4 +59,14 @@ public class S3Util {
 
         s3Operations.deleteObject(bucketName, uploadKey);
     }
+
+    /**
+     * S3 오브젝트 다운로드
+     * @param key
+     * @return
+     */
+    public S3Resource downloadObject(String key) {
+
+        return s3Operations.download(bucketName, key);
+    }
 }
