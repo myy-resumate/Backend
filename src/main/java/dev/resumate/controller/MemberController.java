@@ -63,4 +63,14 @@ public class MemberController {
     public ApiResponseDTO<MemberResponseDTO.TokenDTO> reissueToken(HttpServletRequest request, HttpServletResponse response) {
         return ApiResponseDTO.onSuccess(memberService.reissueToken(request, response));
     }
+
+    /**
+     * 이름 조회
+     * @param member
+     * @return
+     */
+    @GetMapping("/names")
+    public ApiResponseDTO<MemberResponseDTO.NameDTO> getName(@AuthUser Member member) {
+        return ApiResponseDTO.onSuccess(memberService.getName(member));
+    }
 }

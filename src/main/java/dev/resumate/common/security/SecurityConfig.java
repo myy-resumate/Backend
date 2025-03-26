@@ -23,7 +23,7 @@ public class SecurityConfig {
 
     public static final String[] PERMIT_ALL_URL = {  //인증 안해도 되는 요청들
             "/swagger-ui/**", "/v3/api-docs/**", //"/api/test/hello",
-            "/api/members", "/api/members/login", "/api/members/reissue", "/api/attachments/**"
+            "/api/members", "/api/members/login", "/api/members/reissue", //"/api/attachments/**"
     };
 
     @Bean

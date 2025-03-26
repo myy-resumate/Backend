@@ -17,4 +17,13 @@ public class MemberResponseDTO {
         private String accessToken;
     }
 
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class NameDTO {
+
+        private Long memberId;
+        private String name;
+    }
 }
