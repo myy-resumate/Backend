@@ -36,6 +36,8 @@ public enum ErrorCode {
     //파일 관련
     FILE_NAME_IS_NULL(HttpStatus.BAD_REQUEST, "FILE400", "파일 이름이 없습니다."),
     FILE_EXTENSION_INVALID(HttpStatus.BAD_REQUEST, "FILE401", "파일 확장자가 유효하지 않습니다."),
+    FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE402", "파일이 존재하지 않습니다."),
+    FILE_DOWNLOAD_ERROR(HttpStatus.BAD_REQUEST, "FILE403", "파일 다운로드 에러"),
 
     ;
 

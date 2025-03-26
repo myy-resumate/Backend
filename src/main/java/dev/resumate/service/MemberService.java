@@ -159,5 +159,11 @@ public class MemberService {
         return createToken(customUserDetails, response);
     }
 
+    public MemberResponseDTO.NameDTO getName(Member member) {
 
+        return MemberResponseDTO.NameDTO.builder()
+                .memberId(member.getId())
+                .name(member.getName())
+                .build();
+    }
 }
