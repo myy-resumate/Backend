@@ -99,7 +99,7 @@ public class AttachmentService {
 
         try {
             S3Resource s3Resource = s3Util.downloadObject(attachment.getUploadKey());
-            HttpHeaders httpHeaders = getHttpHeaders(s3Resource, encodeFileName(attachment.getFileName()));
+            HttpHeaders httpHeaders = getHttpHeaders(s3Resource);
             //서버에 부담가지 않도록 파일을 메모리에 올리지 않고 스트림으로 반환
             return new ResponseEntity<>(new InputStreamResource(s3Resource.getInputStream()), httpHeaders, HttpStatus.OK);
         } catch (IOException e) {  //에러 응답은 dto로
@@ -108,18 +108,11 @@ public class AttachmentService {
     }
 
     //헤더 설정
-    private HttpHeaders getHttpHeaders(S3Resource s3Resource, String fileName) throws IOException {
+    private HttpHeaders getHttpHeaders(S3Resource s3Resource) throws IOException {
 
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.setContentType(MediaType.parseMediaType(s3Resource.contentType()));
-        httpHeaders.setContentDispositionFormData("attachment", fileName);
         return httpHeaders;
     }
 
-    //한글 파일명 인코딩
-    private String encodeFileName(String fileName) {
-
-        return URLEncoder.encode(fileName, StandardCharsets.UTF_8)
-                .replaceAll("\\+", "%20"); // 공백 처리
-    }
 }

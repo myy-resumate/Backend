@@ -48,9 +48,9 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
     //지원서 목록 조회
     @Query("select distinct r " +
             "from Resume r " +
-            "join r.coverLetters c " +
-            "join r.taggings t " +
-            "join t.tag tag " +
+            "left join r.coverLetters c " +
+            "left join r.taggings t " +
+            "left join t.tag tag " +
             "where r.member = :member")
     Slice<Resume> findAllResume(@Param("member")Member member, Pageable pageable);
 
