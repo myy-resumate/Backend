@@ -34,7 +34,7 @@ public class RedisUtil {
      * @return
      * @param <T>
      */
-    public <T> List<T> toDTO(Set<String> jsonSet, Class<T> classType) {
+    public <T> List<T> toDTO(List<String> jsonSet, Class<T> classType) {
 
         return jsonSet.stream().map(json -> {
             try {
@@ -51,11 +51,14 @@ public class RedisUtil {
      * @param score
      * @param member
      */
-    public void addSortedSet(String key, double score, String member, int limit) {
+    public Set<String> addSortedSet(String key, double score, String member, int limit) {
 
         redisTemplate.opsForZSet().add(key, member, score);
+        Set<String> oldestSet = redisTemplate.opsForZSet().range(key, 0, -1 * (limit + 1));
+
         //limit개까지만 저장. limit를 넘기는 오래된 데이터 삭제
         redisTemplate.opsForZSet().removeRange(key, 0, -1 * (limit + 1));
+        return oldestSet;
     }
 
     /**
