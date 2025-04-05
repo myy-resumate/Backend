@@ -39,6 +39,9 @@ public enum ErrorCode {
     FILE_NOT_FOUND(HttpStatus.NOT_FOUND, "FILE402", "파일이 존재하지 않습니다."),
     FILE_DOWNLOAD_ERROR(HttpStatus.BAD_REQUEST, "FILE403", "파일 다운로드 에러"),
 
+    //Home 관련
+    RECENT_RESUME_NOT_FOUND(HttpStatus.NOT_FOUND, "HOME400", "최근 지원서가 존재하지 않습니다."),
+
     ;
 
 
