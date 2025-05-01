@@ -1,43 +1,68 @@
 package dev.resumate.service;
 
+import dev.resumate.domain.CoverLetter;
+import dev.resumate.domain.Member;
+import dev.resumate.dto.AiRequestDTO;
+import dev.resumate.dto.AiResponseDTO;
+import dev.resumate.repository.CoverLetterRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.document.Document;
+import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class AiService {
 
+    private static final int TOP_K = 3;
+    private static final double SIMILARITY_THRESHOLD = 0.7;
     private final VectorStore vectorStore;
+    private final CoverLetterRepository coverLetterRepository;
 
-    //테스트
-    public String pineconeTest() {
-        Map<String, Object> metaData = new HashMap<>();
-        metaData.put("resumeId", 1);
-        metaData.put("coverLetterId", 23);
+    public AiResponseDTO.SimilarQuestionDTO similaritySearch(Member member, AiRequestDTO.QuestionDTO request) {
+        System.out.println(request.getQuestion());
 
-        Map<String, Object> metaData2 = new HashMap<>();
-        metaData2.put("resumeId", 2);
-        metaData2.put("coverLetterId", 45);
+        List<Document> similarQuestionList = vectorStore.similaritySearch(
+                SearchRequest.builder()
+                        .query(request.getQuestion())
+                        .topK(TOP_K)  //유사한 상위 3개
+                        .similarityThreshold(SIMILARITY_THRESHOLD)  //최소 score(1이면 완전 일치)
+                        .filterExpression("member_id == " + member.getId())  //메타 데이터인 멤버id로 필터링
+                        .build()
+        );
 
-        Map<String, Object> metaData3 = new HashMap<>();
-        metaData3.put("resumeId", 3);
-        metaData3.put("coverLetterId", 32);
+        //자소서 조회
+        List<Long> coverLetterIds = similarQuestionList.stream().map(sq -> metaDataTypeChange(sq, "cover_letter_id")).toList();
+        List<CoverLetter> coverLetters = coverLetterRepository.findAllById(coverLetterIds);
 
+        List<AiResponseDTO.QuestionAnswerDTO> questionAnswerDTOList = similarQuestionList.stream().map(sq ->
+                AiResponseDTO.QuestionAnswerDTO.builder()
+                        .resumeId(metaDataTypeChange(sq, "resume_id"))
+                        .question(sq.getText())
+                        .answer(matchAnswer(coverLetters, metaDataTypeChange(sq, "cover_letter_id")))
+                        .build()).toList();
 
-        List<Document> documentList = List.of(
-                new Document("본인이 진행한 프로젝트 중 가장 기억에 남는 프로젝트를 소개하고, 그 과정에서 맡았던 역할과 해결한 문제를 서술해 주세요.", metaData),
-                new Document("새로운 기술이나 도구를 빠르게 학습해야 했던 경험이 있다면, 어떻게 접근하고 적용했는지 구체적으로 설명해 주세요.", metaData2),
-                new Document("팀 프로젝트에서 발생한 갈등이나 어려움을 해결한 경험이 있다면, 그 상황과 해결 과정을 설명해 주세요.", metaData3));
+        return AiResponseDTO.SimilarQuestionDTO.builder()
+                .questionAnswerDTOList(questionAnswerDTOList)
+                .build();
+    }
 
-        vectorStore.add(documentList);
+    //자소서 id에 해당하는 자소서 답변을 반환
+    private String matchAnswer(List<CoverLetter> coverLetters, Long coverLetterId) {
 
-        //vectorStore.similaritySearch()
-        return "벡터 저장 성공";
+        List<CoverLetter> filterCoverLetters = coverLetters.stream()
+                .filter(c -> Objects.equals(c.getId(), coverLetterId)).toList();
+        return filterCoverLetters.get(0).getAnswer();
+    }
+
+    //오브젝트 타입인 메타데이터를 long타입으로 변환
+    private Long metaDataTypeChange(Document doc, String metaDataName) {
+        return ((Double) doc.getMetadata().get(metaDataName)).longValue();
     }
 }
