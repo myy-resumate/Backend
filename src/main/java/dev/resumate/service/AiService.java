@@ -11,9 +11,7 @@ import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 
 @Service
@@ -26,7 +24,6 @@ public class AiService {
     private final CoverLetterRepository coverLetterRepository;
 
     public AiResponseDTO.SimilarQuestionDTO similaritySearch(Member member, AiRequestDTO.QuestionDTO request) {
-        System.out.println(request.getQuestion());
 
         List<Document> similarQuestionList = vectorStore.similaritySearch(
                 SearchRequest.builder()

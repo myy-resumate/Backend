@@ -98,7 +98,7 @@ public class UpstageEmbeddingModel implements EmbeddingModel {
             floats[i] = doubles.get(i).floatValue();
         }
 
-        return new float[0];
+        return floats;
     }
 
     @Data
