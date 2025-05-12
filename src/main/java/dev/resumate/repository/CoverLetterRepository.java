@@ -10,7 +10,5 @@ import java.util.List;
 @Repository
 public interface CoverLetterRepository extends JpaRepository<CoverLetter, Long> {
 
-    void deleteAllByResume(Resume resume);
-
     List<CoverLetter> findAllByResume(Resume resume);
 }

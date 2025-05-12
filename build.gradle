@@ -21,6 +21,14 @@ configurations {
 
 repositories {
 	mavenCentral()
+
+	//spring-ai
+	maven { url 'https://repo.spring.io/milestone' }
+	maven { url 'https://repo.spring.io/snapshot' }
+	maven {
+		name = 'Central Portal Snapshots'
+		url = 'https://central.sonatype.com/repository/maven-snapshots/'
+	}
 }
 
 dependencies {
@@ -50,6 +58,11 @@ dependencies {
 	//s3
 	implementation 'io.awspring.cloud:spring-cloud-aws-starter-s3:3.2.1'
 
+	//spring-ai
+	implementation platform("org.springframework.ai:spring-ai-bom:1.0.0-SNAPSHOT")
+
+	//spring-ai-pinecone
+	implementation 'org.springframework.ai:spring-ai-starter-vector-store-pinecone'
 }
 
 tasks.named('test') {

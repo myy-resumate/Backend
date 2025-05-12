@@ -1,19 +1,13 @@
 package dev.resumate.service;
 
-import dev.resumate.converter.CoverLetterConverter;
 import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.repository.CoverLetterRepository;
-import dev.resumate.repository.dto.CoverLetterDTO;
-import dev.resumate.repository.dto.TagDTO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -26,7 +20,6 @@ public class CoverLetterService {
     //자소서 수정
     @Transactional
     public void updateCoverLetters(List<ResumeRequestDTO.CoverLetterDTO> coverLetterDTOS, Resume resume) {
-
         List<CoverLetter> oldCoverLetters = coverLetterRepository.findAllByResume(resume);
 
         Map<Long, CoverLetter> oldCoverLettersMap = oldCoverLetters.stream().collect(Collectors.toMap(CoverLetter::getId, Function.identity()));
@@ -40,7 +33,6 @@ public class CoverLetterService {
             if (oldCoverLettersMap.containsKey(coverLetterDTO.getCoverLetterId())) {
                 CoverLetter coverLetter = oldCoverLettersMap.get(coverLetterDTO.getCoverLetterId());
                 coverLetter.setQuestionAndAnswer(coverLetterDTO.getQuestion(), coverLetterDTO.getAnswer());
-                resume.addCoverLetter(coverLetter);
                 coverLetterIdsToDelete.remove(coverLetterDTO.getCoverLetterId());  //삭제 대상 set에서 제거
             } else {
                 addCoverLetter(resume, coverLetterDTO);
