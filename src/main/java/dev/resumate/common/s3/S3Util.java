@@ -43,9 +43,7 @@ public class S3Util {
         Path path = Paths.get(file.getOriginalFilename());
         String contentType = Files.probeContentType(path);
         if (contentType == null) {
-            System.out.println("뭐지");
             contentType = file.getContentType();
-            System.out.println(contentType);
         }
         return s3Operations.upload(bucketName, uploadKey, inputStream, ObjectMetadata.builder().contentType(contentType).build());
     }

@@ -72,7 +72,6 @@ public class Resume extends BaseTimeEntity {
 
     //양방향 편의 메소드 - 태깅
     public void addTagging(Tagging tagging) {
-        System.out.println(this.taggings.size());
         this.taggings.add(tagging);
         tagging.setResume(this);
     }

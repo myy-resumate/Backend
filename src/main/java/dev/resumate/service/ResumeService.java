@@ -87,10 +87,15 @@ public class ResumeService {
 
     //자소서 질문을 벡터db에 저장
     private void saveQuestionVector(Member member, Resume resume) {
+        if (resume.getCoverLetters().isEmpty()) {
+            return;
+        }
         Map<String, Object> metaData = new HashMap<>();
         metaData.put("member_id", member.getId());
         metaData.put("resume_id", resume.getId());
-        List<Document> documentList = resume.getCoverLetters().stream().map(coverLetter -> {
+        List<Document> documentList = resume.getCoverLetters().stream()
+                .filter(coverLetter -> !coverLetter.getQuestion().isEmpty())  //빈 질문은 거르기
+                .map(coverLetter -> {
             metaData.put("cover_letter_id", coverLetter.getId());
             return new Document(coverLetter.getId().toString(), coverLetter.getQuestion(), metaData);  //자소서의 id로 벡터 id 지정
         }).toList();
@@ -137,11 +142,10 @@ public class ResumeService {
     }
 
     private void deleteQuestionVector(Resume resume) {
-        List<String> Ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
-        for (String id : Ids) {
-            System.out.println(id);
+        List<String> ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
+        if (!ids.isEmpty()) {
+            vectorStore.delete(ids);
         }
-        vectorStore.delete(Ids);
     }
 
     //지원서 상세 조회
