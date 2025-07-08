@@ -49,6 +49,10 @@ public class Resume extends BaseTimeEntity {
     @OneToMany(mappedBy = "resume")
     private List<Tagging> taggings = new ArrayList<>();  //목록 조회에서 태깅 조회가 필요해서 어쩔 수 없이 양방향 매핑
 
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "resume_search_id")
+    private ResumeSearch resumeSearch;
+
     //지원서 수정
     public void setResume(ResumeRequestDTO.UpdateDTO request) {
         this.title = request.getTitle();
