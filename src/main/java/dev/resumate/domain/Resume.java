@@ -2,6 +2,7 @@ package dev.resumate.domain;
 
 import dev.resumate.domain.common.BaseTimeEntity;
 import dev.resumate.dto.ResumeRequestDTO;
+import dev.resumate.repository.ResumeSearchRepository;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -49,7 +50,7 @@ public class Resume extends BaseTimeEntity {
     @OneToMany(mappedBy = "resume")
     private List<Tagging> taggings = new ArrayList<>();  //목록 조회에서 태깅 조회가 필요해서 어쩔 수 없이 양방향 매핑
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @JoinColumn(name = "resume_search_id")
     private ResumeSearch resumeSearch;
 
@@ -79,5 +80,9 @@ public class Resume extends BaseTimeEntity {
         System.out.println(this.taggings.size());
         this.taggings.add(tagging);
         tagging.setResume(this);
+    }
+
+    public void setResumeSearch(ResumeSearch resumeSearch) {
+        this.resumeSearch = resumeSearch;
     }
 }
