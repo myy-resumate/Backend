@@ -88,4 +88,14 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "and r.member_id = :memberId;"
             , nativeQuery = true)
     Slice<Resume> findByKeyword(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
+
+    //지원서 검색 v2
+    @Query(value = "select r.* " +
+            "from resume r " +
+            "join resume_search rs on r.resume_search_id = rs.resume_search_id " +
+            "where match(rs.title, rs.organization, rs.questions, rs.answers) " +
+            "against(:keyword in natural language mode) " +
+            "and r.member_id = :memberId;",
+            nativeQuery = true)
+    Slice<Resume> findByKeywordV2(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
 }

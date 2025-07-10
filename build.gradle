@@ -63,6 +63,9 @@ dependencies {
 
 	//spring-ai-pinecone
 	implementation 'org.springframework.ai:spring-ai-starter-vector-store-pinecone'
+
+	//쿼리 파라미터 로그 p6spy
+	//implementation 'com.github.gavlyukovskiy:p6spy-spring-boot-starter:1.9.0'
 }
 
 tasks.named('test') {

@@ -185,7 +185,7 @@ public class ResumeService {
     //지원서 검색
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
 
-        Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);
+        Slice<Resume> resumes = resumeRepository.findByKeywordV2(member.getId(), keyword, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 }
