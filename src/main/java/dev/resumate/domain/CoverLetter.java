@@ -19,7 +19,10 @@ public class CoverLetter extends BaseTimeEntity {
     @Column(name = "cover_letter_id")
     private Long id;
 
+    @Column(columnDefinition = "TEXT")
     private String question;
+
+    @Column(columnDefinition = "TEXT")
     private String answer;
 
     @ManyToOne(fetch = FetchType.LAZY)

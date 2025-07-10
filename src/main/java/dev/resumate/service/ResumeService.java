@@ -6,10 +6,12 @@ import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.common.redis.RedisUtil;
 import dev.resumate.converter.CoverLetterConverter;
 import dev.resumate.converter.ResumeConverter;
+import dev.resumate.converter.ResumeSearchConverter;
 import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.ResumeSearchRepository;
 import dev.resumate.repository.TaggingRepository;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
@@ -55,10 +57,14 @@ public class ResumeService {
     public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) throws IOException {
 
         Resume resume = ResumeConverter.toResume(request, member);
+        StringBuilder questions = new StringBuilder();
+        StringBuilder answers = new StringBuilder();
 
         //자소서 추가
         for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
             resume.addCoverLetter(CoverLetterConverter.toCoverLetter(coverLetterDTO));
+            questions.append(coverLetterDTO.getQuestion()).append(" ");
+            answers.append(coverLetterDTO.getAnswer()).append(" ");
         }
 
         //첨부파일 추가
@@ -69,6 +75,9 @@ public class ResumeService {
             }
         }
 
+        //ResumeSearch 저장
+        ResumeSearch resumeSearch = ResumeSearchConverter.toResumeSearch(resume, questions.toString(), answers.toString());
+        resume.setResumeSearch(resumeSearch);
         Resume newResume = resumeRepository.save(resume);  //cascade로 저장
 
         //태그 저장은 따로
@@ -78,7 +87,7 @@ public class ResumeService {
         homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
 
         //벡터db에 자소서 질문 저장
-        saveQuestionVector(member, newResume);
+        //saveQuestionVector(member, newResume);
 
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
@@ -103,10 +112,11 @@ public class ResumeService {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
 
         //벡터db에서 기존 자소서 질문 벡터 삭제
-        deleteQuestionVector(resume);
+        //deleteQuestionVector(resume);
 
-        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정, 벡터db의 자소서 질문 벡터도 수정
+        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
         attachmentService.updateFiles(files, resume);  //첨부 파일 수정
+        resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
         taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
 
@@ -114,7 +124,7 @@ public class ResumeService {
         homeService.addRecentResume(request.getTags(), resume, member);
 
         //벡터db에 다시 저장
-        saveQuestionVector(member, resume);
+        //saveQuestionVector(member, resume);
 
         return ResumeResponseDTO.UpdateResultDTO.builder()
                 .resumeId(resume.getId())
@@ -131,7 +141,7 @@ public class ResumeService {
         attachmentService.deleteFromS3(resume);
 
         //벡터db에서 자소서 질문 벡터 삭제
-        deleteQuestionVector(resume);
+        //deleteQuestionVector(resume);
 
         resumeRepository.deleteById(resume.getId());
     }
@@ -175,7 +185,7 @@ public class ResumeService {
     //지원서 검색
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
 
-        Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);
+        Slice<Resume> resumes = resumeRepository.findByKeywordV2(member.getId(), keyword, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 }
