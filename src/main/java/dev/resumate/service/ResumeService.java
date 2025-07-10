@@ -116,6 +116,7 @@ public class ResumeService {
 
         coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
         attachmentService.updateFiles(files, resume);  //첨부 파일 수정
+        resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
         taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
 

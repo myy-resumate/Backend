@@ -1,6 +1,7 @@
 package dev.resumate.domain;
 
 import dev.resumate.domain.common.BaseTimeEntity;
+import dev.resumate.dto.ResumeRequestDTO;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,4 +31,17 @@ public class ResumeSearch extends BaseTimeEntity {
 
     @Column(columnDefinition = "TEXT")
     private String answers;
+
+    public void setResumeSearch(ResumeRequestDTO.UpdateDTO request) {
+        this.title = request.getTitle();
+        this.organization = request.getOrganization();
+        StringBuilder questions = new StringBuilder();
+        StringBuilder answers = new StringBuilder();
+        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
+            questions.append(coverLetterDTO.getQuestion()).append(" ");
+            answers.append(coverLetterDTO.getAnswer()).append(" ");
+        }
+        this.questions = questions.toString();
+        this.answers = answers.toString();
+    }
 }
