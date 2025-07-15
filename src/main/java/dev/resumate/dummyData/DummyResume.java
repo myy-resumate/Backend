@@ -5,6 +5,7 @@ import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.domain.CoverLetter;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
+import dev.resumate.domain.ResumeSearch;
 import dev.resumate.repository.MemberRepository;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.service.TaggingService;
@@ -30,17 +31,19 @@ public class DummyResume {
         MyCustomFaker myCustomFaker = new MyCustomFaker();
 
         //500명의 회원이 200개씩 지원서 생성, 지원서에는 자소서가 1개 존재
-        for (int i = 4401; i <= 6007; i++) {
+        for (int i = 1008; i < 1508; i++) {
             Member member = memberRepository.findById((long) i).orElseThrow(() -> new BusinessBaseException(ErrorCode.MEMBER_NOT_FOUND));
 
             for (int j = 0; j < 200; j++) {
                 //회사, 키워드 데이터 랜덤 생성
                 String org = myCustomFaker.resumeFromFile().org();
                 String keyword = myCustomFaker.resumeFromFile().keyword();
+                String questions = faker.joke().pun() + " " + keyword + "에 대한 질문";
+                String answers = faker.joke().pun() + " " + keyword + " " + faker.joke().pun() + faker.joke().pun() + faker.joke().pun();
 
                 CoverLetter coverLetter = CoverLetter.builder()
-                        .question(faker.joke().pun() + " " + keyword + "에 대한 질문")
-                        .answer(faker.joke().pun() + " " + keyword + " " + faker.joke().pun() + faker.joke().pun() + faker.joke().pun())
+                        .question(questions)
+                        .answer(answers)
                         .build();
 
                 Resume resume = Resume.builder()
@@ -55,7 +58,15 @@ public class DummyResume {
                         .taggings(new ArrayList<>())
                         .build();
 
+                ResumeSearch resumeSearch = ResumeSearch.builder()
+                        .title(resume.getTitle())
+                        .organization(resume.getOrganization())
+                        .questions(questions)
+                        .answers(answers)
+                        .build();
+
                 resume.addCoverLetter(coverLetter);
+                resume.setResumeSearch(resumeSearch);
                 Resume savedResume = resumeRepository.save(resume);
 
                 //태그 저장
