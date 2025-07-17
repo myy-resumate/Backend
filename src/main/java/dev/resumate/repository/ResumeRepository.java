@@ -2,15 +2,13 @@ package dev.resumate.repository;
 
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
-import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.dto.*;
+import dev.resumate.repository.queryDsl.ResumeRepositoryCustom;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Slice;
-import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
-import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -18,7 +16,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface ResumeRepository extends JpaRepository<Resume, Long> {
+public interface ResumeRepository extends JpaRepository<Resume, Long>, ResumeRepositoryCustom {
 
     //부모(지원서) 조회
     @Query("SELECT new dev.resumate.repository.dto.ResumeDTO(r.title, r.createdAt, r.organization, r.orgUrl, r.applyStart, r.applyEnd) " +
@@ -64,32 +62,7 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "where r.member = :member and r.applyEnd >= :today order by r.applyEnd asc")
     List<DeadlineDTO> findDeadlineResume(@Param("member") Member member, @Param("today") LocalDate today, Pageable pageable);
 
-    //태그로 검색 - 태그, 태깅에 인덱스 사용
-    @Query("select r from Resume r " +
-            "join r.taggings t " +
-            "join t.tag tag " +
-            "where tag.member = :member and tag.name in :tags " +
-            "group by r.id " +
-            "having count(distinct tag.id) = :tagCount")
-    Slice<Resume> findByTag(@Param("member") Member member, @Param("tags") List<String> tags, @Param("tagCount") int tagCount, Pageable pageable);
-
     //지원서 검색
-    @Query(value = "select r.* " +
-            "from resume r " +
-            "where match(r.title, r.organization) " +
-            "against(:keyword in natural language mode) " +
-            "and r.member_id = :memberId " +
-            "union " +
-            "select r.* " +
-            "from resume r " +
-            "join cover_letter c on r.resume_id = c.resume_id " +
-            "where match(c.question, c.answer) " +
-            "against(:keyword in natural language mode) " +
-            "and r.member_id = :memberId;"
-            , nativeQuery = true)
-    Slice<Resume> findByKeyword(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
-
-    //지원서 검색 v2
     @Query(value = "select r.* " +
             "from resume r " +
             "join resume_search rs on r.resume_search_id = rs.resume_search_id " +
@@ -97,5 +70,5 @@ public interface ResumeRepository extends JpaRepository<Resume, Long> {
             "against(:keyword in natural language mode) " +
             "and r.member_id = :memberId;",
             nativeQuery = true)
-    Slice<Resume> findByKeywordV2(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
+    Slice<Resume> findByKeyword(@Param("memberId") Long memberId, @Param("keyword") String keyword, Pageable pageable);
 }
