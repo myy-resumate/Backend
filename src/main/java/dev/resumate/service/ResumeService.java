@@ -178,14 +178,14 @@ public class ResumeService {
     //태그로 검색
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByTags(Member member, List<String> tags, Pageable pageable) {
 
-        Slice<Resume> resumes = resumeRepository.findByTag(member, tags, tags.size(), pageable);
+        Slice<Resume> resumes = resumeRepository.findByTag(member, tags, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 
     //지원서 검색
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
 
-        Slice<Resume> resumes = resumeRepository.findByKeywordV2(member.getId(), keyword, pageable);
+        Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 }
