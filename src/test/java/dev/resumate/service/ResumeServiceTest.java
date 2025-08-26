@@ -1,6 +1,7 @@
 package dev.resumate.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import dev.resumate.common.slice.SliceUtil;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
 import dev.resumate.domain.ResumeSearch;
@@ -8,12 +9,15 @@ import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.repository.dto.CoverLetterDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.springframework.data.domain.*;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -42,12 +46,23 @@ class ResumeServiceTest {
     private AttachmentService attachmentService;
     @Mock
     private CoverLetterService coverLetterService;
+    private Member member;
+    private Resume resume;
+    private List<Resume> resumes;
+
+    //초기화 - 테스트 전에 먼저 실행됨
+    @BeforeEach
+    void init() {
+        this.member = createTestMember();
+        this.resume = createTestResume(member);
+        this.resumes = new ArrayList<>();
+        resumes.add(resume);
+    }
 
     @Test
     @DisplayName("지원서 저장 성공")
     void saveResume() throws IOException {
         //given
-        Member member = createTestMember();
         ResumeRequestDTO.CreateDTO request = ResumeRequestDTO.CreateDTO.builder()
                 .title("테스트 제목")
                 .organization("테스트 조직")
@@ -58,7 +73,7 @@ class ResumeServiceTest {
                 .tags(new ArrayList<>())
                 .build();
         List<MultipartFile> files = new ArrayList<>();
-        when(resumeRepository.save(any())).thenReturn(createTestResume(member));
+        when(resumeRepository.save(any())).thenReturn(resume);
 
         //when
         ResumeResponseDTO.CreateResultDTO result = resumeService.saveResume(member, request, files);
@@ -71,7 +86,6 @@ class ResumeServiceTest {
     @DisplayName("지원서 수정 성공")
     void updateResume() throws IOException {
         //given
-        Member member = createTestMember();
         Long resumeId = 1L;
         ResumeRequestDTO.UpdateDTO request = ResumeRequestDTO.UpdateDTO.builder()
                 .title("테스트 제목")
@@ -83,7 +97,7 @@ class ResumeServiceTest {
                 .tags(new ArrayList<>())
                 .build();
         List<MultipartFile> files = new ArrayList<>();
-        when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(createTestResume(member)));
+        when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(resume));
 
         //when
         ResumeResponseDTO.UpdateResultDTO result = resumeService.updateResume(member, resumeId, request, files);
@@ -97,8 +111,6 @@ class ResumeServiceTest {
     void deleteResume() {
         //given
         Long resumeId = 1L;
-        Member member = createTestMember();
-        Resume resume = createTestResume(member);
         when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(resume));
 
         //when & then
@@ -112,9 +124,7 @@ class ResumeServiceTest {
     @DisplayName("지원서 상세 조회 성공")
     void readResume() throws JsonProcessingException {
         //given
-        Member member = createTestMember();
         Long resumeId = 1L;
-        Resume resume = createTestResume(member);
         List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();
         coverLetterDTOS.add(CoverLetterDTO.builder()
                 .coverLetterId(1L)
@@ -135,15 +145,51 @@ class ResumeServiceTest {
     }
 
     @Test
+    @DisplayName("지원서 목록 조회 성공")
     void readResumeList() {
+        //given
+        Pageable pageable = PageRequest.of(0, 10);
+        when(resumeRepository.findAllResume(member, pageable)).thenReturn(SliceUtil.toSlice(resumes, pageable));
+
+        //when
+        Slice<ResumeResponseDTO.ReadThumbnailDTO> result = resumeService.readResumeList(member, pageable);
+
+        //then
+        assertThat(result.getNumberOfElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("테스트 지원서");
     }
 
     @Test
+    @DisplayName("태그로 검색 성공")
     void getResumesByTags() {
+        //given
+        Pageable pageable = PageRequest.of(0, 10);
+        List<String> tags = new ArrayList<>();
+        tags.add("태그1");
+        when(resumeRepository.findByTag(member, tags, pageable)).thenReturn(SliceUtil.toSlice(resumes, pageable));
+
+        //when
+        Slice<ResumeResponseDTO.ReadThumbnailDTO> result = resumeService.getResumesByTags(member, tags, pageable);
+
+        //then
+        assertThat(result.getNumberOfElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("테스트 지원서");
     }
 
     @Test
+    @DisplayName("지원서 검색")
     void getResumesByKeyword() {
+        //given
+        String keyword = "검색 키워드";
+        Pageable pageable = PageRequest.of(0, 10);
+        when(resumeRepository.findByKeyword(member.getId(), keyword, pageable)).thenReturn(SliceUtil.toSlice(resumes, pageable));
+
+        //when
+        Slice<ResumeResponseDTO.ReadThumbnailDTO> result = resumeService.getResumesByKeyword(member, keyword, pageable);
+
+        //then
+        assertThat(result.getNumberOfElements()).isEqualTo(1);
+        assertThat(result.getContent().get(0).getTitle()).isEqualTo("테스트 지원서");
     }
 
     private Member createTestMember() {
@@ -163,7 +209,7 @@ class ResumeServiceTest {
                 .answers("테스트 답변")
                 .build();
 
-        return Resume.builder()
+        Resume resume = Resume.builder()
                 .id(1L)
                 .member(member)
                 .organization("테스트 조직")
@@ -172,6 +218,10 @@ class ResumeServiceTest {
                 .title("테스트 지원서")
                 .orgUrl("https://test.com")
                 .resumeSearch(resumeSearch)
+                .taggings(new ArrayList<>())
                 .build();
+
+        ReflectionTestUtils.setField(resume, "createdAt", LocalDate.now().atStartOfDay());  //resume의 생성시간을 임의로 설정
+        return resume;
     }
 }
