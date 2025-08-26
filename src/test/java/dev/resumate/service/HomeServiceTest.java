@@ -10,6 +10,7 @@ import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.repository.dto.DeadlineDTO;
 import dev.resumate.repository.dto.TagDTO;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,14 +38,22 @@ class HomeServiceTest {
     private RedisUtil redisUtil;
     @Mock
     private RecentResumeRepository recentResumeRepository;
+    private Member member;
+    private Resume resume;
+    private List<Resume> resumeList;
+
+    @BeforeEach
+    void init() {
+        this.member = createTestMember();
+        this.resume = createTestResume(member);
+        this.resumeList = new ArrayList<>();
+        resumeList.add(resume);
+    }
 
     @Test
     @DisplayName("캘린더 월별 조회 성공")
     void getCalendar() {
         //given
-        Member member = createTestMember();
-        List<Resume> resumeList = new ArrayList<>();
-        resumeList.add(createTestResume(member));
         when(resumeRepository.findResumeByApplyEndAndMember(any(), any(), any())).thenReturn(resumeList);
 
         //when
@@ -60,7 +69,6 @@ class HomeServiceTest {
     @DisplayName("마감 공고 조회 성공")
     void getDeadline() {
         //given
-        Member member = createTestMember();
         List<DeadlineDTO> deadlineDTOS = new ArrayList<>();
         deadlineDTOS.add(DeadlineDTO.builder()
                 .organization("테스트 조직")
@@ -81,8 +89,6 @@ class HomeServiceTest {
     @DisplayName("최근 본 지원서 저장 성공")
     void addRecentResume() {
         //given
-        Member member = createTestMember();
-        Resume resume = createTestResume(member);
         List<TagDTO> tagDTOS = new ArrayList<>();
         tagDTOS.add(TagDTO.builder()
                 .taggingId(1L)
@@ -99,7 +105,6 @@ class HomeServiceTest {
     @DisplayName("최근 본 지원서 조회 성공")
     void getRecentResume() {
         //given
-        Member member = createTestMember();
         Set<String> resumeIdSet = new HashSet<>();
         resumeIdSet.add("1");
         when(redisUtil.getSortedSet(member.getId().toString(), 5)).thenReturn(resumeIdSet);

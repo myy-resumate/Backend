@@ -15,6 +15,7 @@ import dev.resumate.dto.MemberResponseDTO;
 import dev.resumate.repository.MemberRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -64,25 +65,29 @@ class MemberServiceTest {
     private JwtUtil jwtUtil;
     @Mock
     private CustomUserDetailsService customUserDetailsService;
+    private Member member;
+    private JwtTokenDTO jwtTokenDTO;
+
+    @BeforeEach
+    void init() {
+        this.member = createTestMember();
+        this.jwtTokenDTO = JwtTokenDTO.builder()
+                .grantType("Bearer")
+                .accessToken("accessToken")
+                .refreshToken("refreshToken")
+                .build();
+    }
 
     @Test
     @DisplayName("회원 가입 성공")
     void join() {
         //given
-        String name = "테스트";
-        String email = "testtt@naver.com";
-        String password = "password";
         MemberRequestDTO.JoinDto request = MemberRequestDTO.JoinDto.builder()
-                .name(name)
-                .email(email)
-                .password(password)
+                .name(member.getName())
+                .email(member.getEmail())
+                .password(member.getPassword())
                 .build();
-        Member member = Member.builder()
-                .name(name)
-                .email(email)
-                .password(password)
-                .build();
-        when(memberRepository.existsMemberByEmail(email)).thenReturn(false);
+        when(memberRepository.existsMemberByEmail(member.getEmail())).thenReturn(false);
         when(memberRepository.save(member)).thenReturn(member);
 
         //when&then
@@ -90,7 +95,7 @@ class MemberServiceTest {
         assertDoesNotThrow(() -> memberService.join(request));
 
         //호출 잘 됐는지
-        verify(memberRepository).existsMemberByEmail(email);
+        verify(memberRepository).existsMemberByEmail(member.getEmail());
         verify(memberRepository).save(any());
     }
 
@@ -99,25 +104,13 @@ class MemberServiceTest {
     void login() {
         //given
         MemberRequestDTO.LoginDto request = MemberRequestDTO.LoginDto.builder()
-                .email("test@email")
-                .password("testPassword")
+                .email(member.getEmail())
+                .password(member.getPassword())
                 .build();
-
-        CustomUserDetails customUserDetails = new CustomUserDetails(Member.builder()
-                .id(1L)
-                .name("테스트")
-                .email("test@email.com")
-                .password("testPassword")
-                .role(Role.MEMBER)
-                .build());
-
+        CustomUserDetails customUserDetails = new CustomUserDetails(member);
         when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class))).thenReturn(auth);
         when(auth.getPrincipal()).thenReturn(customUserDetails);
-        when(jwtUtil.generateToken(any(), any())).thenReturn(JwtTokenDTO.builder()
-                        .grantType("Bearer")
-                        .accessToken("accessToken")
-                        .refreshToken("refreshToken")
-                        .build());
+        when(jwtUtil.generateToken(any(), any())).thenReturn(jwtTokenDTO);
 
         //when
         MemberResponseDTO.TokenDTO tokenDTO = memberService.login(request, httpServletResponse);
@@ -131,12 +124,6 @@ class MemberServiceTest {
     @DisplayName("로그아웃 성공")
     void logout() {
         //given
-        Member member = Member.builder()
-                .id(1L)
-                .name("테스트")
-                .email("test@email")
-                .password("testpassword")
-                .build();
         when(httpServletRequest.getHeader("Authorization")).thenReturn("Bearer accessToken");
         when(cookieUtil.getCookie("refresh_token", httpServletRequest)).thenReturn("refreshToken");
 
@@ -150,22 +137,12 @@ class MemberServiceTest {
         //given
         when(cookieUtil.getCookie(any(), any())).thenReturn("refreshToken");
         when(refreshTokenRepository.findById(any())).thenReturn(Optional.ofNullable(RefreshToken.builder()
-                .memberId(1L)
-                .email("test@email.com")
+                .memberId(member.getId())
+                .email(member.getEmail())
                 .refreshToken("refreshToken")
                 .build()));
-        when(customUserDetailsService.loadUserByUsername(any())).thenReturn(new CustomUserDetails(Member.builder()
-                .id(1L)
-                .name("테스트")
-                .email("test@email.com")
-                .password("testPassword")
-                .role(Role.MEMBER)
-                .build()));
-        when(jwtUtil.generateToken(any(), any())).thenReturn(JwtTokenDTO.builder()
-                .grantType("Bearer")
-                .accessToken("accessToken")
-                .refreshToken("refreshToken")
-                .build());
+        when(customUserDetailsService.loadUserByUsername(any())).thenReturn(new CustomUserDetails(member));
+        when(jwtUtil.generateToken(any(), any())).thenReturn(jwtTokenDTO);
 
         //when
         MemberResponseDTO.TokenDTO tokenDTO = memberService.reissueToken(httpServletRequest, httpServletResponse);
@@ -178,19 +155,21 @@ class MemberServiceTest {
     @Test
     @DisplayName("멤버 NameDTO 반환 성공")
     void getName() {
-        //given
-        Member member = Member.builder()
-                .id(1L)
-                .name("테스트")
-                .email("test@email")
-                .password("testpassword")
-                .build();
-
         //when
         MemberResponseDTO.NameDTO nameDTO = memberService.getName(member);
 
         //then
         assertThat(nameDTO.getMemberId()).isEqualTo(member.getId());
         assertThat(nameDTO.getName()).isEqualTo(member.getName());
+    }
+
+    private Member createTestMember() {
+        return Member.builder()
+                .id(1L)
+                .name("테스트")
+                .email("test@email.com")
+                .password("testPassword")
+                .role(Role.MEMBER)
+                .build();
     }
 }
