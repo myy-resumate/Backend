@@ -39,12 +39,6 @@ public class ResumeController {
         return ApiResponseDTO.onSuccess(resumeService.saveResume(member, request, files));
     }
 
-    @PostMapping("/create2")
-    public ApiResponseDTO<ResumeResponseDTO.CreateResultDTOV2> createResumeV2(@AuthUser Member member,
-                                                                              @RequestPart(value = "request") ResumeRequestDTO.CreateDTOV2 request) throws IOException {
-        return ApiResponseDTO.onSuccess(resumeService.saveResumeV2(member, request));
-    }
-
     /**
      * 지원서 수정
      *

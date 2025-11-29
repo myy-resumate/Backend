@@ -33,54 +33,20 @@ public class S3Util {
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
     private final S3Operations s3Operations;
-    private final S3Presigner s3Presigner;
-
-    //presigned url 발급
-    public String getPresignedUrl(String uploadKey, String contentType) {
-        PutObjectRequest objectRequest = PutObjectRequest.builder()
-                .bucket(bucketName)
-                .key(uploadKey)
-                .contentType(contentType)
-                .build();
-
-        PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofHours(1))  //유효시간 1시간
-                .putObjectRequest(objectRequest)
-                .build();
-
-        PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
-        String presignedUrl = presignedRequest.url().toString();
-        s3Presigner.close();
-        return presignedUrl;
-    }
 
     /**
      * S3에 업로드
-     * @param file
      * @param uploadKey
      * @return
      * @throws IOException
      */
     @Async("imageUploadExecutor")
-    public /*CompletableFuture<S3Resource>*/ void uploadObject(/*MultipartFile file,*/InputStream inputStream, String contentType, String uploadKey) throws IOException {
+    public void uploadObject(InputStream inputStream, String contentType, String uploadKey) throws IOException {
+
         //로깅 레벨이 info까지로 제한됨 주의
-        log.info("Thread upload work start: {}, image: {}", Thread.currentThread().getThreadGroup().getName()+ " " + Thread.currentThread().getId(), uploadKey);
-        /*InputStream inputStream = file.getInputStream();
-
-        //파일 이름이 없는 경우
-        if (file.getOriginalFilename() == null) {
-            throw new BusinessBaseException(ErrorCode.FILE_NAME_IS_NULL);
-        }
-
-        Path path = Paths.get(file.getOriginalFilename());
-        String contentType = Files.probeContentType(path);
-        if (contentType == null) {
-            contentType = file.getContentType();
-        }*/
-        s3Operations.upload(
-                bucketName, uploadKey, inputStream, ObjectMetadata.builder().contentType(contentType).build());
-        /*return CompletableFuture.completedFuture(s3Operations.upload(
-                bucketName, uploadKey, inputStream, ObjectMetadata.builder().contentType(contentType).build()));*/
+        log.info("Thread upload work start: {}, image: {}",
+                Thread.currentThread().getThreadGroup().getName()+ " " + Thread.currentThread().getId(), uploadKey);
+        s3Operations.upload(bucketName, uploadKey, inputStream, ObjectMetadata.builder().contentType(contentType).build());
     }
 
 
