@@ -47,8 +47,8 @@ public class AttachmentService {
     public Attachment uploadS3AndConvertAttachment(MultipartFile file, String resumeTitle) throws IOException {
 
         String uploadKey = FOLDER + resumeTitle + UUID.randomUUID();  //고유한 키 생성
-        S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
-        return AttachmentConverter.toAttachment(s3Resource.getURL().toString(), uploadKey, file.getOriginalFilename());
+        //S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
+        return AttachmentConverter.toAttachment(/*s3Resource.getURL().toString()*/ "temp url", uploadKey, file.getOriginalFilename());
     }
 
     //첨부파일 수정
@@ -67,7 +67,7 @@ public class AttachmentService {
                 if (fileIterator.hasNext()) {
                     MultipartFile file = fileIterator.next();
                     oldAttachment.setFileName(file.getOriginalFilename());
-                    s3Util.uploadObject(file, oldAttachment.getUploadKey());
+                    //s3Util.uploadObject(file, oldAttachment.getUploadKey());
                 } else {  //더 이상 바꿀 file이 없으면 남은 기존 파일은 삭제
                     s3Util.deleteObject(oldAttachment.getUploadKey());
                     resume.getAttachments().remove(oldAttachment);

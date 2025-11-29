@@ -21,8 +21,25 @@ public class ResumeResponseDTO {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class CreateResultDTO {
-
         private Long resumeId;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class CreateResultDTOV2 {
+        private Long resumeId;
+        List<FileDTO> fileDTOS;
+    }
+
+    @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static class FileDTO {
+        private String fileName;
+        private String prsignedUrl;
     }
 
     @Getter

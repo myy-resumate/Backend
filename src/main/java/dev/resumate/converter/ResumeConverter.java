@@ -31,6 +31,22 @@ public class ResumeConverter {
                 .build();
     }
 
+    //presigned url version
+    public static Resume toResumeV2(ResumeRequestDTO.CreateDTOV2 request, Member member) {
+
+        return Resume.builder()
+                .title(request.getTitle())
+                .organization(request.getOrganization())
+                .orgUrl(request.getOrgURl())
+                .applyStart(request.getApplyStart())
+                .applyEnd(request.getApplyEnd())
+                .member(member)
+                .coverLetters(new ArrayList<>())  //빌더패턴은 @AllArgsConstructor로 생성하기 때문에 필드에서 초기화한게 무시된다. 다시 세팅해야함
+                .attachments(new ArrayList<>())
+                .taggings(new ArrayList<>())
+                .build();
+    }
+
     public static ResumeResponseDTO.ReadResultDTO toReadResultDTO(Resume resume, List<CoverLetterDTO> coverLetterDTOS, List<AttachmentDTO> attachmentDTOS, List<TagDTO> tagDTOS) {
         return ResumeResponseDTO.ReadResultDTO.builder()
                 .title(resume.getTitle())
