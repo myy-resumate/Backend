@@ -48,7 +48,7 @@ public class AttachmentService {
 
         String uploadKey = FOLDER + resumeTitle + UUID.randomUUID();  //고유한 키 생성
         //S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
-        return AttachmentConverter.toAttachment(uploadKey, file.getOriginalFilename());
+        return AttachmentConverter.toAttachment(/*s3Resource.getURL().toString()*/ "temp url", uploadKey, file.getOriginalFilename());
     }
 
     //첨부파일 수정
