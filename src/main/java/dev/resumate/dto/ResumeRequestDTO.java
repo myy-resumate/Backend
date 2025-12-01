@@ -22,18 +22,6 @@ public class ResumeRequestDTO {
         private LocalDate applyStart;
         private LocalDate applyEnd;
         private List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();  //null 가능
-    }
-
-    @Getter
-    public static class CreateDTOV2 {
-
-        private String title;
-        private List<String> tags = new ArrayList<>();  //null 가능
-        private String organization;
-        private String orgURl;
-        private LocalDate applyStart;
-        private LocalDate applyEnd;
-        private List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();  //null 가능
         private List<FileDTO> fileDTOS = new ArrayList<>();
     }
 

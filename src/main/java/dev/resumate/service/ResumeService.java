@@ -19,7 +19,6 @@ import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
 import dev.resumate.repository.dto.TagDTO;
-import io.awspring.cloud.s3.S3Resource;
 import io.pinecone.configs.PineconeConnection;
 import lombok.RequiredArgsConstructor;
 import org.springframework.ai.document.Document;
@@ -34,19 +33,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ResumeService {
 
-    private static final String FOLDER = "attachment/";
+    private static final String S3_FOLDER = "attachment/";
 
     private final ResumeRepository resumeRepository;
     private final AttachmentService attachmentService;
@@ -58,17 +52,19 @@ public class ResumeService {
 
     /**
      * 지원서 저장
+     *
      * @param member
      * @param request
-     * @param files
      * @return
+     * @throws IOException
      */
     @Transactional //하나라도 실패하면 전체 롤백
-    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) throws IOException {
+    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request) throws IOException {
 
-        Resume resume = ResumeConverter.toResume(request, member);
         StringBuilder questions = new StringBuilder();
         StringBuilder answers = new StringBuilder();
+        List<ResumeResponseDTO.FileDTO> presignedUrlList = new ArrayList<>();
+        Resume resume = ResumeConverter.toResume(request, member);
 
         //자소서 추가
         for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
@@ -78,11 +74,11 @@ public class ResumeService {
         }
 
         //첨부파일 추가
-        if (files != null) {
-            for (MultipartFile file : files) {
-                Attachment attachment = uploadS3AndConvertAttachment(file, resume.getTitle());
-                resume.addAttachment(attachment);
-            }
+        for (ResumeRequestDTO.FileDTO file : request.getFileDTOS()) {
+            String uploadKey = S3_FOLDER + resume.getTitle() + UUID.randomUUID();  //고유한 키 생성
+            String presignedUrl = uploadS3AndConvertAttachment(file.getFileName(), file.getContentType(), uploadKey);
+            presignedUrlList.add(buildFileDTO(file, presignedUrl));
+            resume.addAttachment(buildAttachment(file, uploadKey));
         }
 
         //ResumeSearch 저장
@@ -101,93 +97,35 @@ public class ResumeService {
 
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
-                .build();
-    }
-
-    //presigned url version
-    @Transactional //하나라도 실패하면 전체 롤백
-    public ResumeResponseDTO.CreateResultDTOV2 saveResumeV2(Member member, ResumeRequestDTO.CreateDTOV2 request) throws IOException {
-
-        Resume resume = ResumeConverter.toResumeV2(request, member);
-        StringBuilder questions = new StringBuilder();
-        StringBuilder answers = new StringBuilder();
-
-        //자소서 추가
-        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
-            resume.addCoverLetter(CoverLetterConverter.toCoverLetter(coverLetterDTO));
-            questions.append(coverLetterDTO.getQuestion()).append(" ");
-            answers.append(coverLetterDTO.getAnswer()).append(" ");
-        }
-
-        //첨부파일 추가
-        List<ResumeResponseDTO.FileDTO> presignedUrlList = new ArrayList<>();
-        if (request.getFileDTOS() != null) {
-            for (ResumeRequestDTO.FileDTO file : request.getFileDTOS()) {
-                String uploadKey = FOLDER + resume.getTitle() + UUID.randomUUID();  //고유한 키 생성
-                String presignedUrl = uploadS3AndConvertAttachmentV2(file.getFileName(), file.getContentType(), uploadKey);
-                System.out.println("presignedUrl = " + presignedUrl);
-                presignedUrlList.add(ResumeResponseDTO.FileDTO.builder()
-                        .fileName(file.getFileName())
-                        .prsignedUrl(presignedUrl)
-                        .build());
-                resume.addAttachment(Attachment.builder()
-                                .fileName(file.getFileName())
-                                .url("temp")
-                                .uploadKey(uploadKey)
-                                .build());
-            }
-        }
-
-        //ResumeSearch 저장
-        ResumeSearch resumeSearch = ResumeSearchConverter.toResumeSearch(resume, questions.toString(), answers.toString());
-        resume.setResumeSearch(resumeSearch);
-        Resume newResume = resumeRepository.save(resume);  //cascade로 저장
-
-        //태그 저장은 따로
-        taggingService.saveTagAndTagging(request.getTags(), member, newResume);
-
-        //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
-
-        //벡터db에 자소서 질문 저장
-        //saveQuestionVector(member, newResume);
-
-        return ResumeResponseDTO.CreateResultDTOV2.builder()
-                .resumeId(newResume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
     }
 
-    //presigned url version
-    private String uploadS3AndConvertAttachmentV2(String fileName, String contentType, String uploadKey) throws IOException {
+    //첨부파일 빌더
+    private static Attachment buildAttachment(ResumeRequestDTO.FileDTO file, String uploadKey) {
+        return Attachment.builder()
+                .fileName(file.getFileName())
+                .uploadKey(uploadKey)
+                .build();
+    }
+
+    //FileDTO 빌더
+    private static ResumeResponseDTO.FileDTO buildFileDTO(ResumeRequestDTO.FileDTO file, String presignedUrl) {
+        return ResumeResponseDTO.FileDTO.builder()
+                .fileName(file.getFileName())
+                .presignedUrl(presignedUrl)
+                .build();
+    }
+
+    //presigned url 발급
+    private String uploadS3AndConvertAttachment(String fileName, String contentType, String uploadKey) {
         if (fileName == null) {
             throw new BusinessBaseException(ErrorCode.FILE_NAME_IS_NULL);
         }
         if (contentType == null) {
-            //예외 처리
+            throw new BusinessBaseException(ErrorCode.CONTENT_TYPE_IS_NULL);
         }
         return s3Util.getPresignedUrl(uploadKey, contentType);
-    }
-
-
-    //첨부파일 s3 업로드
-    private Attachment uploadS3AndConvertAttachment(MultipartFile file, String resumeTitle) throws IOException {
-
-        String uploadKey = FOLDER + resumeTitle + UUID.randomUUID();  //고유한 키 생성
-
-        if (file.getOriginalFilename() == null) {
-            throw new BusinessBaseException(ErrorCode.FILE_NAME_IS_NULL);
-        }
-
-        Path path = Paths.get(file.getOriginalFilename());
-        String contentType = Files.probeContentType(path);
-        if (contentType == null) {
-            contentType = file.getContentType();
-        }
-
-        /*S3Resource s3Resource = */s3Util.uploadObject(file.getInputStream(), contentType, uploadKey);
-        /*CompletableFuture<S3Resource> future = s3Util.uploadObject(file, uploadKey);*/
-        return AttachmentConverter.toAttachment(/*future.join().getURL().toString()*/ "temp", uploadKey, file.getOriginalFilename());
     }
 
     //자소서 질문을 벡터db에 저장

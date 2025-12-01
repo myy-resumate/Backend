@@ -26,23 +26,14 @@ public class ResumeController {
 
     /**
      * 지원서 저장
-     *
      * @param member
      * @param request
-     * @param files
      * @return
      */
     @PostMapping
     public ApiResponseDTO<ResumeResponseDTO.CreateResultDTO> createResume(@AuthUser Member member,
-                                                                          @RequestPart(value = "request") ResumeRequestDTO.CreateDTO request,
-                                                                          @RequestPart(value = "files", required = false) List<MultipartFile> files) throws IOException {
-        return ApiResponseDTO.onSuccess(resumeService.saveResume(member, request, files));
-    }
-
-    @PostMapping("/create2")
-    public ApiResponseDTO<ResumeResponseDTO.CreateResultDTOV2> createResumeV2(@AuthUser Member member,
-                                                                              @RequestPart(value = "request") ResumeRequestDTO.CreateDTOV2 request) throws IOException {
-        return ApiResponseDTO.onSuccess(resumeService.saveResumeV2(member, request));
+                                                                              @RequestPart(value = "request") ResumeRequestDTO.CreateDTO request) throws IOException {
+        return ApiResponseDTO.onSuccess(resumeService.saveResume(member, request));
     }
 
     /**
