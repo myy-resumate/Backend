@@ -1,6 +1,8 @@
 package dev.resumate.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import dev.resumate.common.redis.RedisUtil;
+import dev.resumate.common.redis.repository.RecentResumeRepository;
 import dev.resumate.common.slice.SliceUtil;
 import dev.resumate.domain.Member;
 import dev.resumate.domain.Resume;
@@ -46,6 +48,10 @@ class ResumeServiceTest {
     private AttachmentService attachmentService;
     @Mock
     private CoverLetterService coverLetterService;
+    @Mock
+    private RedisUtil redisUtil;
+    @Mock
+    private RecentResumeRepository recentResumeRepository;
     private Member member;
     private Resume resume;
     private List<Resume> resumes;
@@ -71,12 +77,12 @@ class ResumeServiceTest {
                 .applyEnd(LocalDate.now())
                 .coverLetterDTOS(new ArrayList<>())
                 .tags(new ArrayList<>())
+                .fileDTOS(new ArrayList<>())
                 .build();
-        List<MultipartFile> files = new ArrayList<>();
         when(resumeRepository.save(any())).thenReturn(resume);
 
         //when
-        ResumeResponseDTO.CreateResultDTO result = resumeService.saveResume(member, request, files);
+        ResumeResponseDTO.CreateResultDTO result = resumeService.saveResume(member, request);
 
         //then
         assertThat(result.getResumeId()).isEqualTo(1L);
@@ -114,7 +120,7 @@ class ResumeServiceTest {
         when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(resume));
 
         //when & then
-        assertDoesNotThrow(() -> resumeService.deleteResume(resumeId));
+        assertDoesNotThrow(() -> resumeService.deleteResume(member, resumeId));
         verify(resumeRepository).deleteById(resumeId);
         verify(taggingService).deleteTagging(resume);
         verify(attachmentService).deleteFromS3(resume);
