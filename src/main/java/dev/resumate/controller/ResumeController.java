@@ -26,17 +26,14 @@ public class ResumeController {
 
     /**
      * 지원서 저장
-     *
      * @param member
      * @param request
-     * @param files
      * @return
      */
     @PostMapping
     public ApiResponseDTO<ResumeResponseDTO.CreateResultDTO> createResume(@AuthUser Member member,
-                                                                          @RequestPart(value = "request") ResumeRequestDTO.CreateDTO request,
-                                                                          @RequestPart(value = "files", required = false) List<MultipartFile> files) throws IOException {
-        return ApiResponseDTO.onSuccess(resumeService.saveResume(member, request, files));
+                                                                              @RequestPart(value = "request") ResumeRequestDTO.CreateDTO request) throws IOException {
+        return ApiResponseDTO.onSuccess(resumeService.saveResume(member, request));
     }
 
     /**
@@ -62,8 +59,8 @@ public class ResumeController {
      * @return
      */
     @DeleteMapping("/{resumeId}")
-    public ApiResponseDTO<String> deleteResume(@PathVariable Long resumeId) {
-        resumeService.deleteResume(resumeId);
+    public ApiResponseDTO<String> deleteResume(@AuthUser Member member, @PathVariable Long resumeId) {
+        resumeService.deleteResume(member, resumeId);
         return ApiResponseDTO.onSuccess("지원서 삭제 성공");
     }
 

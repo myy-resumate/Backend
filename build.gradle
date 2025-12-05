@@ -64,7 +64,7 @@ dependencies {
 	//spring-ai-pinecone
 	implementation 'org.springframework.ai:spring-ai-starter-vector-store-pinecone'
   
-  //data-faker
+    //data-faker
 	implementation 'net.datafaker:datafaker:2.4.3'
 
 	//쿼리 파라미터 로그 p6spy

@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.common.redis.RedisUtil;
+import dev.resumate.common.s3.S3Util;
+import dev.resumate.converter.AttachmentConverter;
+import dev.resumate.common.redis.repository.RecentResumeRepository;
 import dev.resumate.converter.CoverLetterConverter;
 import dev.resumate.converter.ResumeConverter;
 import dev.resumate.converter.ResumeSearchConverter;
@@ -32,12 +35,13 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ResumeService {
+
+    private static final String S3_FOLDER = "attachment/";
 
     private final ResumeRepository resumeRepository;
     private final AttachmentService attachmentService;
@@ -45,20 +49,24 @@ public class ResumeService {
     private final CoverLetterService coverLetterService;
     private final HomeService homeService;
     private final VectorStore vectorStore;
+    private final RedisUtil redisUtil;
+    private final RecentResumeRepository recentResumeRepository;
+    private final S3Util s3Util;
 
     /**
      * 지원서 저장
      * @param member
      * @param request
-     * @param files
      * @return
+     * @throws IOException
      */
     @Transactional //하나라도 실패하면 전체 롤백
-    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request, List<MultipartFile> files) throws IOException {
+    public ResumeResponseDTO.CreateResultDTO saveResume(Member member, ResumeRequestDTO.CreateDTO request) throws IOException {
 
-        Resume resume = ResumeConverter.toResume(request, member);
         StringBuilder questions = new StringBuilder();
         StringBuilder answers = new StringBuilder();
+        List<ResumeResponseDTO.FileDTO> presignedUrlList = new ArrayList<>();
+        Resume resume = ResumeConverter.toResume(request, member);
 
         //자소서 추가
         for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : request.getCoverLetterDTOS()) {
@@ -68,11 +76,11 @@ public class ResumeService {
         }
 
         //첨부파일 추가
-        if (files != null) {
-            for (MultipartFile file : files) {
-                Attachment attachment = attachmentService.uploadS3AndConvertAttachment(file, resume.getTitle());
-                resume.addAttachment(attachment);
-            }
+        for (ResumeRequestDTO.FileDTO file : request.getFileDTOS()) {
+            String uploadKey = S3_FOLDER + resume.getTitle() + UUID.randomUUID();  //고유한 키 생성
+            String presignedUrl = uploadS3AndConvertAttachment(file.getFileName(), file.getContentType(), uploadKey);
+            presignedUrlList.add(buildFileDTO(file, presignedUrl));
+            resume.addAttachment(buildAttachment(file, uploadKey));
         }
 
         //ResumeSearch 저장
@@ -91,15 +99,48 @@ public class ResumeService {
 
         return ResumeResponseDTO.CreateResultDTO.builder()
                 .resumeId(newResume.getId())
+                .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //첨부파일 빌더
+    private static Attachment buildAttachment(ResumeRequestDTO.FileDTO file, String uploadKey) {
+        return Attachment.builder()
+                .fileName(file.getFileName())
+                .uploadKey(uploadKey)
+                .build();
+    }
+
+    //FileDTO 빌더
+    private static ResumeResponseDTO.FileDTO buildFileDTO(ResumeRequestDTO.FileDTO file, String presignedUrl) {
+        return ResumeResponseDTO.FileDTO.builder()
+                .fileName(file.getFileName())
+                .presignedUrl(presignedUrl)
+                .build();
+    }
+
+    //presigned url 발급
+    private String uploadS3AndConvertAttachment(String fileName, String contentType, String uploadKey) {
+        if (fileName == null) {
+            throw new BusinessBaseException(ErrorCode.FILE_NAME_IS_NULL);
+        }
+        if (contentType == null) {
+            throw new BusinessBaseException(ErrorCode.CONTENT_TYPE_IS_NULL);
+        }
+        return s3Util.getPresignedUrl(uploadKey, contentType);
     }
 
     //자소서 질문을 벡터db에 저장
     private void saveQuestionVector(Member member, Resume resume) {
+        if (resume.getCoverLetters().isEmpty()) {
+            return;
+        }
         Map<String, Object> metaData = new HashMap<>();
         metaData.put("member_id", member.getId());
         metaData.put("resume_id", resume.getId());
-        List<Document> documentList = resume.getCoverLetters().stream().map(coverLetter -> {
+        List<Document> documentList = resume.getCoverLetters().stream()
+                .filter(coverLetter -> !coverLetter.getQuestion().isEmpty())  //빈 질문은 거르기
+                .map(coverLetter -> {
             metaData.put("cover_letter_id", coverLetter.getId());
             return new Document(coverLetter.getId().toString(), coverLetter.getQuestion(), metaData);  //자소서의 id로 벡터 id 지정
         }).toList();
@@ -133,7 +174,7 @@ public class ResumeService {
 
     //지원서 삭제
     @Transactional
-    public void deleteResume(Long resumeId) {
+    public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
         taggingService.deleteTagging(resume);
@@ -143,7 +184,15 @@ public class ResumeService {
         //벡터db에서 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
 
+        //redis에서 최근 지원서 삭제
+        deleteRecentResume(member, resume);
         resumeRepository.deleteById(resume.getId());
+    }
+
+    //최근 지원서 삭제
+    private void deleteRecentResume(Member member, Resume resume) {
+        redisUtil.deleteSortedSetMember(member.getId().toString(), resume.getId());
+        recentResumeRepository.deleteById(resume.getId());
     }
 
     private void deleteQuestionVector(Resume resume) {

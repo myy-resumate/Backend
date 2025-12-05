@@ -71,4 +71,13 @@ public class RedisUtil {
 
         return redisTemplate.opsForZSet().reverseRangeByScore(key, 0, Double.MAX_VALUE, 0, count);
     }
+
+    /**
+     * sorted set의 특정 멤버 삭제
+     * @param key
+     * @param member
+     */
+    public void deleteSortedSetMember(String key, Object member) {
+        redisTemplate.opsForZSet().remove(key, member.toString());
+    }
 }
