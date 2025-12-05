@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 public class ResumeConverter {
 
+    //presigned url version
     public static Resume toResume(ResumeRequestDTO.CreateDTO request, Member member) {
 
         return Resume.builder()
