@@ -59,8 +59,8 @@ public class ResumeController {
      * @return
      */
     @DeleteMapping("/{resumeId}")
-    public ApiResponseDTO<String> deleteResume(@PathVariable Long resumeId) {
-        resumeService.deleteResume(resumeId);
+    public ApiResponseDTO<String> deleteResume(@AuthUser Member member, @PathVariable Long resumeId) {
+        resumeService.deleteResume(member, resumeId);
         return ApiResponseDTO.onSuccess("지원서 삭제 성공");
     }
 
