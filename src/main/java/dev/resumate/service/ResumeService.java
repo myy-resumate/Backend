@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.common.redis.RedisUtil;
+import dev.resumate.common.redis.repository.RecentResumeRepository;
 import dev.resumate.converter.CoverLetterConverter;
 import dev.resumate.converter.ResumeConverter;
 import dev.resumate.converter.ResumeSearchConverter;
@@ -45,6 +46,8 @@ public class ResumeService {
     private final CoverLetterService coverLetterService;
     private final HomeService homeService;
     private final VectorStore vectorStore;
+    private final RedisUtil redisUtil;
+    private final RecentResumeRepository recentResumeRepository;
 
     /**
      * 지원서 저장
@@ -96,10 +99,15 @@ public class ResumeService {
 
     //자소서 질문을 벡터db에 저장
     private void saveQuestionVector(Member member, Resume resume) {
+        if (resume.getCoverLetters().isEmpty()) {
+            return;
+        }
         Map<String, Object> metaData = new HashMap<>();
         metaData.put("member_id", member.getId());
         metaData.put("resume_id", resume.getId());
-        List<Document> documentList = resume.getCoverLetters().stream().map(coverLetter -> {
+        List<Document> documentList = resume.getCoverLetters().stream()
+                .filter(coverLetter -> !coverLetter.getQuestion().isEmpty())  //빈 질문은 거르기
+                .map(coverLetter -> {
             metaData.put("cover_letter_id", coverLetter.getId());
             return new Document(coverLetter.getId().toString(), coverLetter.getQuestion(), metaData);  //자소서의 id로 벡터 id 지정
         }).toList();
@@ -133,7 +141,7 @@ public class ResumeService {
 
     //지원서 삭제
     @Transactional
-    public void deleteResume(Long resumeId) {
+    public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
         taggingService.deleteTagging(resume);
@@ -143,15 +151,22 @@ public class ResumeService {
         //벡터db에서 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
 
+        //redis에서 최근 지원서 삭제
+        deleteRecentResume(member, resume);
         resumeRepository.deleteById(resume.getId());
     }
 
+    //최근 지원서 삭제
+    private void deleteRecentResume(Member member, Resume resume) {
+        redisUtil.deleteSortedSetMember(member.getId().toString(), resume.getId());
+        recentResumeRepository.deleteById(resume.getId());
+    }
+
     private void deleteQuestionVector(Resume resume) {
-        List<String> Ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
-        for (String id : Ids) {
-            System.out.println(id);
+        List<String> ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
+        if (!ids.isEmpty()) {
+            vectorStore.delete(ids);
         }
-        vectorStore.delete(Ids);
     }
 
     //지원서 상세 조회
