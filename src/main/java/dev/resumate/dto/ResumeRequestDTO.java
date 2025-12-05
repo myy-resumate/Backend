@@ -3,6 +3,7 @@ package dev.resumate.dto;
 import dev.resumate.repository.dto.TagDTO;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -13,6 +14,9 @@ import java.util.List;
 public class ResumeRequestDTO {
 
     @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class CreateDTO {
 
         private String title;
@@ -32,6 +36,9 @@ public class ResumeRequestDTO {
     }
 
     @Getter
+    @Builder
+    @NoArgsConstructor
+    @AllArgsConstructor
     public static class UpdateDTO {
 
         private String title;
