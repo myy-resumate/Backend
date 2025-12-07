@@ -16,10 +16,15 @@ public class WebConfig implements WebMvcConfigurer {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOriginPattern("*");
+        configuration.setAllowedOrigins(
+                List.of(
+                        "https://hammanger.pages.dev",
+                        "http://localhost:3000"
+                )
+        );
         configuration.addAllowedMethod("*");
         configuration.addAllowedHeader("*");
-        configuration.setAllowCredentials(true);
+        configuration.setAllowCredentials(true);  //true면 addAllowedOriginPattern("*") 사용 불가 -> 도메인 명시해야함
 
         //파일 다운로드 시 cors 문제로 content-disposition이 안 담겨오는 문제 해결
         //exposeHeader에 content-disposition 추가
