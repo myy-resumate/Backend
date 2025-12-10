@@ -43,16 +43,6 @@ public class AttachmentService {
     private final AttachmentRepository attachmentRepository;
     private final S3Util s3Util;
 
-    //첨부파일 s3에서 삭제
-    public void deleteFromS3(Resume resume) {
-
-        //s3에서 삭제
-        List<Attachment> attachments = attachmentRepository.findAllByResume(resume);
-        for (Attachment attachment : attachments) {
-            s3Util.deleteObject(attachment.getUploadKey());
-        }
-    }
-
     //첨부파일 다운로드
     public ResponseEntity<?> fileDownload(Long attachmentId) throws IOException {
 
@@ -75,5 +65,4 @@ public class AttachmentService {
         httpHeaders.setContentType(MediaType.parseMediaType(s3Resource.contentType()));
         return httpHeaders;
     }
-
 }

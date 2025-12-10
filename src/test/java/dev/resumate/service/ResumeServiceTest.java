@@ -106,7 +106,7 @@ class ResumeServiceTest {
         when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(resume));
 
         //when
-        ResumeResponseDTO.UpdateResultDTO result = resumeService.updateResume(member, resumeId, request, files);
+        ResumeResponseDTO.UpdateResultDTO result = resumeService.updateResume(member, resumeId, request);
 
         //then
         assertThat(result.getResumeId()).isEqualTo(1L);
@@ -123,7 +123,7 @@ class ResumeServiceTest {
         assertDoesNotThrow(() -> resumeService.deleteResume(member, resumeId));
         verify(resumeRepository).deleteById(resumeId);
         verify(taggingService).deleteTagging(resume);
-        verify(attachmentService).deleteFromS3(resume);
+        //verify(attachmentService).deleteFromS3(resume);
     }
 
     @Test

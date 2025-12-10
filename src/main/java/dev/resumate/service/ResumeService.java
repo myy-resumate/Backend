@@ -45,7 +45,6 @@ public class ResumeService {
     private static final String S3_FOLDER = "attachment/";
 
     private final ResumeRepository resumeRepository;
-    private final AttachmentService attachmentService;
     private final TaggingService taggingService;
     private final CoverLetterService coverLetterService;
     private final HomeService homeService;
@@ -210,14 +209,18 @@ public class ResumeService {
         return fileDTOS;
     }
 
-    //지원서 삭제
+    /**
+     * 지원서 삭제
+     * @param member
+     * @param resumeId
+     */
     @Transactional
     public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
         taggingService.deleteTagging(resume);
         //첨부파일 s3에서 삭제
-        attachmentService.deleteFromS3(resume);
+        deleteFromS3(resume);
 
         //벡터db에서 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
@@ -227,12 +230,22 @@ public class ResumeService {
         resumeRepository.deleteById(resume.getId());
     }
 
+    //첨부파일 s3에서 삭제
+    private void deleteFromS3(Resume resume) {
+        //s3에서 삭제
+        List<Attachment> attachments = attachmentRepository.findAllByResume(resume);
+        for (Attachment attachment : attachments) {
+            s3Util.deleteObject(attachment.getUploadKey());
+        }
+    }
+
     //최근 지원서 삭제
     private void deleteRecentResume(Member member, Resume resume) {
         redisUtil.deleteSortedSetMember(member.getId().toString(), resume.getId());
         recentResumeRepository.deleteById(resume.getId());
     }
 
+    //벡터 삭제
     private void deleteQuestionVector(Resume resume) {
         List<String> Ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
         for (String id : Ids) {
