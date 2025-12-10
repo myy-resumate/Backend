@@ -41,15 +41,13 @@ public class ResumeController {
      *
      * @param resumeId
      * @param request
-     * @param files
      * @return
      */
     @PatchMapping("/{resumeId}")
     public ApiResponseDTO<ResumeResponseDTO.UpdateResultDTO> updateResume(@AuthUser Member member,
                                                                           @PathVariable Long resumeId,
-                                                                          @Valid @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request,
-                                                                          @RequestPart(value = "files", required = false) List<MultipartFile> files) throws IOException {
-        return ApiResponseDTO.onSuccess(resumeService.updateResume(member, resumeId, request, files));
+                                                                          @Valid @RequestPart(value = "request") ResumeRequestDTO.UpdateDTO request) throws IOException {
+        return ApiResponseDTO.onSuccess(resumeService.updateResume(member, resumeId, request));
     }
 
     /**

@@ -39,48 +39,9 @@ public class AttachmentService {
 
     @Value("${spring.cloud.aws.s3.bucket}")
     private String bucketName;
-    private static final String FOLDER = "attachment/";
 
     private final AttachmentRepository attachmentRepository;
     private final S3Util s3Util;
-
-    public Attachment uploadS3AndConvertAttachment(MultipartFile file, String resumeTitle) throws IOException {
-
-        String uploadKey = FOLDER + resumeTitle + UUID.randomUUID();  //고유한 키 생성
-        //S3Resource s3Resource = s3Util.uploadObject(file, uploadKey);
-        return AttachmentConverter.toAttachment(/*s3Resource.getURL().toString()*/ "temp url", uploadKey, file.getOriginalFilename());
-    }
-
-    //첨부파일 수정
-    @Transactional
-    public void updateFiles(List<MultipartFile> files, Resume resume) throws IOException{
-
-        List<Attachment> oldAttachments = attachmentRepository.findAllByResume(resume);
-
-        if (files == null) { //files가 null인 경우 그냥 삭제
-            oldAttachments.forEach(oldAttachment -> s3Util.deleteObject(oldAttachment.getUploadKey()));
-            resume.getAttachments().removeIf(oldAttachments::contains);
-        } else {
-            Iterator<MultipartFile> fileIterator = files.iterator();
-
-            for (Attachment oldAttachment : oldAttachments) {
-                if (fileIterator.hasNext()) {
-                    MultipartFile file = fileIterator.next();
-                    oldAttachment.setFileName(file.getOriginalFilename());
-                    //s3Util.uploadObject(file, oldAttachment.getUploadKey());
-                } else {  //더 이상 바꿀 file이 없으면 남은 기존 파일은 삭제
-                    s3Util.deleteObject(oldAttachment.getUploadKey());
-                    resume.getAttachments().remove(oldAttachment);
-                }
-            }
-
-            //기존보다 추가된 file이 많은 경우
-            while (fileIterator.hasNext()) {
-                MultipartFile file = fileIterator.next();
-                resume.addAttachment(uploadS3AndConvertAttachment(file, resume.getTitle()));
-            }
-        }
-    }
 
     //첨부파일 s3에서 삭제
     public void deleteFromS3(Resume resume) {
