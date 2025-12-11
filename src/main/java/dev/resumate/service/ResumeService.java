@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.common.redis.RedisUtil;
+import dev.resumate.common.redis.domain.RecentResume;
 import dev.resumate.common.s3.S3Util;
 import dev.resumate.converter.AttachmentConverter;
 import dev.resumate.common.redis.repository.RecentResumeRepository;
@@ -13,10 +14,7 @@ import dev.resumate.converter.ResumeSearchConverter;
 import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
-import dev.resumate.repository.AttachmentRepository;
-import dev.resumate.repository.ResumeRepository;
-import dev.resumate.repository.ResumeSearchRepository;
-import dev.resumate.repository.TaggingRepository;
+import dev.resumate.repository.*;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
@@ -36,6 +34,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -43,11 +43,12 @@ import java.util.*;
 public class ResumeService {
 
     private static final String S3_FOLDER = "attachment/";
+    private static final int MAX_RECENT_RESUME = 5;  //최대 5개까지 조회
 
     private final ResumeRepository resumeRepository;
-    private final TaggingService taggingService;
-    private final CoverLetterService coverLetterService;
-    private final HomeService homeService;
+    private final TaggingRepository taggingRepository;
+    private final TagRepository tagRepository;
+    private final CoverLetterRepository coverLetterRepository;
     private final VectorStore vectorStore;
     private final RedisUtil redisUtil;
     private final RecentResumeRepository recentResumeRepository;
@@ -90,10 +91,10 @@ public class ResumeService {
         Resume newResume = resumeRepository.save(resume);  //cascade로 저장
 
         //태그 저장은 따로
-        taggingService.saveTagAndTagging(request.getTags(), member, newResume);
+        saveTagAndTagging(request.getTags(), member, newResume);
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
+        addRecentResume(toTagDTOList(request.getTags()), newResume, member);
 
         //벡터db에 자소서 질문 저장
         //saveQuestionVector(member, newResume);
@@ -102,6 +103,56 @@ public class ResumeService {
                 .resumeId(newResume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //최근 본 지원서 redis에 저장
+    private void addRecentResume(List<TagDTO> tags, Resume resume, Member member) throws JsonProcessingException {
+
+        ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeConverter.toReadThumbnailDTO(resume, tags);
+
+        String jsonMember = redisUtil.toJson(thumbnailDTO);  //dto를 json으로 직렬화
+        Set<String> oldestSet = redisUtil.addSortedSet(member.getId().toString(), System.currentTimeMillis() / 1000.0, resume.getId().toString(), MAX_RECENT_RESUME);
+
+        oldestSet.forEach(oldestId -> recentResumeRepository.deleteById(Long.valueOf(oldestId)));  //5개 넘는 오래된 데이터 삭제
+        recentResumeRepository.save(RecentResume.builder()
+                .resumeId(resume.getId())
+                .thumbnail(jsonMember)
+                .build());
+    }
+
+    //태그를 dto로 변환 -> converter로 옮기기
+    public List<TagDTO> toTagDTOList(List<String> tags) {
+        return tags.stream().map(tag -> TagDTO.builder()
+                .tagName(tag)
+                .build()).toList();
+    }
+
+    //태그, 태깅 저장
+    private void saveTagAndTagging(List<String> tags, Member member, Resume resume) {
+
+        for (String tagName : tags) {
+            Tag tag = saveTag(tagName, member);
+            saveTagging(resume, tag);
+        }
+    }
+
+    //이미 있으면 태그 반환, 없으면 저장
+    private Tag saveTag(String tagName, Member member) {
+
+        return tagRepository.findByNameAndMember(tagName, member)
+                .orElseGet(() -> tagRepository.save(Tag.builder()
+                        .name(tagName)
+                        .member(member)
+                        .build()));
+    }
+
+    private void saveTagging(Resume resume, Tag tag) {
+
+        Tagging tagging = Tagging.builder()
+                .tag(tag)
+                .build();
+        resume.addTagging(tagging);  //양방향 편의 메소드
+        taggingRepository.save(tagging);
     }
 
     //첨부파일 빌더
@@ -148,7 +199,14 @@ public class ResumeService {
         vectorStore.add(documentList);
     }
 
-    //지원서 수정
+    /**
+     * 지원서 수정
+     * @param member
+     * @param resumeId
+     * @param request
+     * @return
+     * @throws IOException
+     */
     @Transactional
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request) throws IOException {
 
@@ -158,14 +216,14 @@ public class ResumeService {
         //벡터db에서 기존 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
 
-        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
+        updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
         presignedUrlList = updateFilesWithPresignedUrl(resume, request.getFileDTOS());  //첨부 파일 수정
         resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
-        taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
+        updateTagging(request.getTags(), member, resume);  //태깅 수정
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(request.getTags(), resume, member);
+        addRecentResume(request.getTags(), resume, member);
 
         //벡터db에 다시 저장
         //saveQuestionVector(member, resume);
@@ -174,6 +232,71 @@ public class ResumeService {
                 .resumeId(resume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //자소서 수정
+    private void updateCoverLetters(List<ResumeRequestDTO.CoverLetterDTO> coverLetterDTOS, Resume resume) {
+        List<CoverLetter> oldCoverLetters = coverLetterRepository.findAllByResume(resume);
+
+        Map<Long, CoverLetter> oldCoverLettersMap = oldCoverLetters.stream().collect(Collectors.toMap(CoverLetter::getId, Function.identity()));
+
+        //삭제 대상을 구하기 위한 set
+        Set<Long> coverLetterIdsToDelete = new HashSet<>(oldCoverLettersMap.keySet());
+
+        //기존 꺼는 수정하고, 새로운 건 추가
+        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : coverLetterDTOS) {
+
+            if (oldCoverLettersMap.containsKey(coverLetterDTO.getCoverLetterId())) {
+                CoverLetter coverLetter = oldCoverLettersMap.get(coverLetterDTO.getCoverLetterId());
+                coverLetter.setQuestionAndAnswer(coverLetterDTO.getQuestion(), coverLetterDTO.getAnswer());
+                coverLetterIdsToDelete.remove(coverLetterDTO.getCoverLetterId());  //삭제 대상 set에서 제거
+            } else {
+                addCoverLetter(resume, coverLetterDTO);
+            }
+        }
+
+        //set에 남은 자소서들 삭제
+        //cascade, orphanRemoval 적용한 경우엔 리스트에서 제거해줘야 한다.
+        resume.getCoverLetters().removeIf(coverLetter -> coverLetterIdsToDelete.contains(coverLetter.getId()));
+    }
+
+    //자소서 수정 시 자소서 추가
+    private void addCoverLetter(Resume resume, ResumeRequestDTO.CoverLetterDTO coverLetterDTO) {
+
+        CoverLetter newCoverLetter = CoverLetter.builder()
+                .question(coverLetterDTO.getQuestion())
+                .answer(coverLetterDTO.getAnswer())
+                .build();
+
+        resume.addCoverLetter(newCoverLetter);
+    }
+
+    //태깅 수정
+    public void updateTagging(List<TagDTO> tags, Member member, Resume resume) {
+
+        List<Tagging> oldTaggings = taggingRepository.findAllByResume(resume);
+
+        //Map으로 변환 - key=taggingId, value=tagging객체
+        Map<Long, Tagging> oldTaggingMap = oldTaggings.stream().collect(Collectors.toMap(Tagging::getId, Function.identity()));
+
+        //taggingId를 Set에 저장 - 삭제 대상 tagging
+        Set<Long> taggingIdsToDelete = new HashSet<>(oldTaggingMap.keySet());
+
+        for (TagDTO tagDTO : tags) {
+            Tag tag = saveTag(tagDTO.getTagName(), member);
+
+            if (oldTaggingMap.containsKey(tagDTO.getTaggingId())) {
+                Tagging tagging = oldTaggingMap.get(tagDTO.getTaggingId());
+                tagging.setTag(tag);  //변경감지
+                taggingIdsToDelete.remove(tagDTO.getTaggingId());
+            } else {
+                saveTagging(resume, tag);
+            }
+        }
+        //양방향 매핑된 resume의 tagging리스트에서도 요소 삭제
+        resume.getTaggings().removeIf(tagging -> taggingIdsToDelete.contains(tagging.getId()));
+        //set에 남아있는 tagging들 삭제
+        taggingRepository.deleteAllById(taggingIdsToDelete);
     }
 
     //첨부파일 수정하고, presigned url 발급
@@ -218,7 +341,7 @@ public class ResumeService {
     public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
-        taggingService.deleteTagging(resume);
+        taggingRepository.deleteAllByResume(resume);
         //첨부파일 s3에서 삭제
         deleteFromS3(resume);
 
@@ -254,7 +377,13 @@ public class ResumeService {
         vectorStore.delete(Ids);
     }
 
-    //지원서 상세 조회
+    /**
+     * 지원서 상세조회
+     * @param member
+     * @param resumeId
+     * @return
+     * @throws JsonProcessingException
+     */
     public ResumeResponseDTO.ReadResultDTO readResume(Member member, Long resumeId) throws JsonProcessingException {
 
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
@@ -263,26 +392,43 @@ public class ResumeService {
         List<TagDTO> tagDTOS = resumeRepository.findTag(resumeId);
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(tagDTOS, resume, member);
+        addRecentResume(tagDTOS, resume, member);
 
         return ResumeConverter.toReadResultDTO(resume, coverLetterDTOS, attachmentDTOS, tagDTOS);
     }
 
-    //지원서 목록 조회
+    /**
+     * 지원서 목록조회
+     * @param member
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> readResumeList(Member member, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findAllResume(member, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 
-    //태그로 검색
+    /**
+     * 태그 기반 검색
+     * @param member
+     * @param tags
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByTags(Member member, List<String> tags, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findByTag(member, tags, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 
-    //지원서 검색
+    /**
+     * 지원서 검색
+     * @param member
+     * @param keyword
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);

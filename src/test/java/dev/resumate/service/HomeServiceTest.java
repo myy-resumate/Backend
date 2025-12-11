@@ -86,22 +86,6 @@ class HomeServiceTest {
     }
 
     @Test
-    @DisplayName("최근 본 지원서 저장 성공")
-    void addRecentResume() {
-        //given
-        List<TagDTO> tagDTOS = new ArrayList<>();
-        tagDTOS.add(TagDTO.builder()
-                .taggingId(1L)
-                .tagName("테스트 태그")
-                .build());
-        ReflectionTestUtils.setField(resume, "createdAt", LocalDate.now().atStartOfDay());  //스프링에서 제공하는 필드값 강제 세팅 메소드
-        when(redisUtil.addSortedSet(member.getId().toString(), System.currentTimeMillis() / 1000.0, resume.getId().toString(), 5)).thenReturn(new HashSet<>());
-
-        //when & then
-        assertDoesNotThrow(() -> homeService.addRecentResume(tagDTOS, resume, member));
-    }
-
-    @Test
     @DisplayName("최근 본 지원서 조회 성공")
     void getRecentResume() {
         //given

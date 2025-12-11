@@ -68,38 +68,6 @@ public class HomeService {
     }
 
     /**
-     * 최근 본 지원서 redis에 저장
-     * @param tags
-     * @param resume
-     * @param member
-     * @throws JsonProcessingException
-     */
-    public void addRecentResume(List<TagDTO> tags, Resume resume, Member member) throws JsonProcessingException {
-
-        ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeConverter.toReadThumbnailDTO(resume, tags);
-
-        String jsonMember = redisUtil.toJson(thumbnailDTO);  //dto를 json으로 직렬화
-        Set<String> oldestSet = redisUtil.addSortedSet(member.getId().toString(), System.currentTimeMillis() / 1000.0, resume.getId().toString(), MAX_RECENT_RESUME);
-
-        oldestSet.forEach(oldestId -> recentResumeRepository.deleteById(Long.valueOf(oldestId)));  //5개 넘는 오래된 데이터 삭제
-        recentResumeRepository.save(RecentResume.builder()
-                .resumeId(resume.getId())
-                .thumbnail(jsonMember)
-                .build());
-    }
-
-    /**
-     * 태그를 dto로 변환 -> converter로 옮기기
-     * @param tags
-     * @return
-     */
-    public List<TagDTO> toTagDTOList(List<String> tags) {
-         return tags.stream().map(tag -> TagDTO.builder()
-                 .tagName(tag)
-                 .build()).toList();
-    }
-
-    /**
      * 최근 본 지원서 조회
      * @param member
      * @return
