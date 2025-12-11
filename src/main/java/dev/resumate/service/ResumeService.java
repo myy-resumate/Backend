@@ -46,7 +46,7 @@ public class ResumeService {
     private final ResumeRepository resumeRepository;
     private final TaggingRepository taggingRepository;
     private final TagRepository tagRepository;
-    private final CoverLetterService coverLetterService;
+    private final CoverLetterRepository coverLetterRepository;
     private final HomeService homeService;
     private final VectorStore vectorStore;
     private final RedisUtil redisUtil;
@@ -176,7 +176,14 @@ public class ResumeService {
         vectorStore.add(documentList);
     }
 
-    //지원서 수정
+    /**
+     * 지원서 수정
+     * @param member
+     * @param resumeId
+     * @param request
+     * @return
+     * @throws IOException
+     */
     @Transactional
     public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request) throws IOException {
 
@@ -186,7 +193,7 @@ public class ResumeService {
         //벡터db에서 기존 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
 
-        coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
+        updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
         presignedUrlList = updateFilesWithPresignedUrl(resume, request.getFileDTOS());  //첨부 파일 수정
         resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
@@ -202,6 +209,43 @@ public class ResumeService {
                 .resumeId(resume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //자소서 수정
+    private void updateCoverLetters(List<ResumeRequestDTO.CoverLetterDTO> coverLetterDTOS, Resume resume) {
+        List<CoverLetter> oldCoverLetters = coverLetterRepository.findAllByResume(resume);
+
+        Map<Long, CoverLetter> oldCoverLettersMap = oldCoverLetters.stream().collect(Collectors.toMap(CoverLetter::getId, Function.identity()));
+
+        //삭제 대상을 구하기 위한 set
+        Set<Long> coverLetterIdsToDelete = new HashSet<>(oldCoverLettersMap.keySet());
+
+        //기존 꺼는 수정하고, 새로운 건 추가
+        for (ResumeRequestDTO.CoverLetterDTO coverLetterDTO : coverLetterDTOS) {
+
+            if (oldCoverLettersMap.containsKey(coverLetterDTO.getCoverLetterId())) {
+                CoverLetter coverLetter = oldCoverLettersMap.get(coverLetterDTO.getCoverLetterId());
+                coverLetter.setQuestionAndAnswer(coverLetterDTO.getQuestion(), coverLetterDTO.getAnswer());
+                coverLetterIdsToDelete.remove(coverLetterDTO.getCoverLetterId());  //삭제 대상 set에서 제거
+            } else {
+                addCoverLetter(resume, coverLetterDTO);
+            }
+        }
+
+        //set에 남은 자소서들 삭제
+        //cascade, orphanRemoval 적용한 경우엔 리스트에서 제거해줘야 한다.
+        resume.getCoverLetters().removeIf(coverLetter -> coverLetterIdsToDelete.contains(coverLetter.getId()));
+    }
+
+    //자소서 수정 시 자소서 추가
+    private void addCoverLetter(Resume resume, ResumeRequestDTO.CoverLetterDTO coverLetterDTO) {
+
+        CoverLetter newCoverLetter = CoverLetter.builder()
+                .question(coverLetterDTO.getQuestion())
+                .answer(coverLetterDTO.getAnswer())
+                .build();
+
+        resume.addCoverLetter(newCoverLetter);
     }
 
     //태깅 수정
@@ -310,7 +354,13 @@ public class ResumeService {
         vectorStore.delete(Ids);
     }
 
-    //지원서 상세 조회
+    /**
+     * 지원서 상세조회
+     * @param member
+     * @param resumeId
+     * @return
+     * @throws JsonProcessingException
+     */
     public ResumeResponseDTO.ReadResultDTO readResume(Member member, Long resumeId) throws JsonProcessingException {
 
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
@@ -324,21 +374,38 @@ public class ResumeService {
         return ResumeConverter.toReadResultDTO(resume, coverLetterDTOS, attachmentDTOS, tagDTOS);
     }
 
-    //지원서 목록 조회
+    /**
+     * 지원서 목록조회
+     * @param member
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> readResumeList(Member member, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findAllResume(member, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 
-    //태그로 검색
+    /**
+     * 태그 기반 검색
+     * @param member
+     * @param tags
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByTags(Member member, List<String> tags, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findByTag(member, tags, pageable);
         return ResumeConverter.mapReadThumbnailDTO(resumes);
     }
 
-    //지원서 검색
+    /**
+     * 지원서 검색
+     * @param member
+     * @param keyword
+     * @param pageable
+     * @return
+     */
     public Slice<ResumeResponseDTO.ReadThumbnailDTO> getResumesByKeyword(Member member, String keyword, Pageable pageable) {
 
         Slice<Resume> resumes = resumeRepository.findByKeyword(member.getId(), keyword, pageable);

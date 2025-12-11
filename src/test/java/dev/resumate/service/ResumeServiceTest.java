@@ -10,9 +10,11 @@ import dev.resumate.domain.ResumeSearch;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.AttachmentRepository;
+import dev.resumate.repository.CoverLetterRepository;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.repository.TaggingRepository;
 import dev.resumate.repository.dto.CoverLetterDTO;
+import org.checkerframework.checker.units.qual.A;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -45,8 +47,6 @@ class ResumeServiceTest {
     @Mock
     private HomeService homeService;
     @Mock
-    private CoverLetterService coverLetterService;
-    @Mock
     private RedisUtil redisUtil;
     @Mock
     private RecentResumeRepository recentResumeRepository;
@@ -54,6 +54,8 @@ class ResumeServiceTest {
     private AttachmentRepository attachmentRepository;
     @Mock
     private TaggingRepository taggingRepository;
+    @Mock
+    private CoverLetterRepository coverLetterRepository;
 
     private Member member;
     private Resume resume;
@@ -107,6 +109,7 @@ class ResumeServiceTest {
                 .build();
         List<MultipartFile> files = new ArrayList<>();
         when(resumeRepository.findById(resumeId)).thenReturn(Optional.ofNullable(resume));
+        when(coverLetterRepository.findAllByResume(resume)).thenReturn(new ArrayList<>());
 
         //when
         ResumeResponseDTO.UpdateResultDTO result = resumeService.updateResume(member, resumeId, request);
@@ -228,6 +231,7 @@ class ResumeServiceTest {
                 .resumeSearch(resumeSearch)
                 .taggings(new ArrayList<>())
                 .attachments(new ArrayList<>())
+                .coverLetters(new ArrayList<>())
                 .build();
 
         ReflectionTestUtils.setField(resume, "createdAt", LocalDate.now().atStartOfDay());  //resume의 생성시간을 임의로 설정
