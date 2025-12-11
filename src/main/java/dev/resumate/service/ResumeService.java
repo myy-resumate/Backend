@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import dev.resumate.apiPayload.exception.BusinessBaseException;
 import dev.resumate.apiPayload.exception.ErrorCode;
 import dev.resumate.common.redis.RedisUtil;
+import dev.resumate.common.redis.domain.RecentResume;
 import dev.resumate.common.s3.S3Util;
 import dev.resumate.converter.AttachmentConverter;
 import dev.resumate.common.redis.repository.RecentResumeRepository;
@@ -42,12 +43,12 @@ import java.util.stream.Collectors;
 public class ResumeService {
 
     private static final String S3_FOLDER = "attachment/";
+    private static final int MAX_RECENT_RESUME = 5;  //최대 5개까지 조회
 
     private final ResumeRepository resumeRepository;
     private final TaggingRepository taggingRepository;
     private final TagRepository tagRepository;
     private final CoverLetterRepository coverLetterRepository;
-    private final HomeService homeService;
     private final VectorStore vectorStore;
     private final RedisUtil redisUtil;
     private final RecentResumeRepository recentResumeRepository;
@@ -93,7 +94,7 @@ public class ResumeService {
         saveTagAndTagging(request.getTags(), member, newResume);
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
+        addRecentResume(toTagDTOList(request.getTags()), newResume, member);
 
         //벡터db에 자소서 질문 저장
         //saveQuestionVector(member, newResume);
@@ -102,6 +103,28 @@ public class ResumeService {
                 .resumeId(newResume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //최근 본 지원서 redis에 저장
+    private void addRecentResume(List<TagDTO> tags, Resume resume, Member member) throws JsonProcessingException {
+
+        ResumeResponseDTO.ReadThumbnailDTO thumbnailDTO = ResumeConverter.toReadThumbnailDTO(resume, tags);
+
+        String jsonMember = redisUtil.toJson(thumbnailDTO);  //dto를 json으로 직렬화
+        Set<String> oldestSet = redisUtil.addSortedSet(member.getId().toString(), System.currentTimeMillis() / 1000.0, resume.getId().toString(), MAX_RECENT_RESUME);
+
+        oldestSet.forEach(oldestId -> recentResumeRepository.deleteById(Long.valueOf(oldestId)));  //5개 넘는 오래된 데이터 삭제
+        recentResumeRepository.save(RecentResume.builder()
+                .resumeId(resume.getId())
+                .thumbnail(jsonMember)
+                .build());
+    }
+
+    //태그를 dto로 변환 -> converter로 옮기기
+    public List<TagDTO> toTagDTOList(List<String> tags) {
+        return tags.stream().map(tag -> TagDTO.builder()
+                .tagName(tag)
+                .build()).toList();
     }
 
     //태그, 태깅 저장
@@ -200,7 +223,7 @@ public class ResumeService {
         updateTagging(request.getTags(), member, resume);  //태깅 수정
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(request.getTags(), resume, member);
+        addRecentResume(request.getTags(), resume, member);
 
         //벡터db에 다시 저장
         //saveQuestionVector(member, resume);
@@ -369,7 +392,7 @@ public class ResumeService {
         List<TagDTO> tagDTOS = resumeRepository.findTag(resumeId);
 
         //redis에 최근 본 지원서로 저장
-        homeService.addRecentResume(tagDTOS, resume, member);
+        addRecentResume(tagDTOS, resume, member);
 
         return ResumeConverter.toReadResultDTO(resume, coverLetterDTOS, attachmentDTOS, tagDTOS);
     }
