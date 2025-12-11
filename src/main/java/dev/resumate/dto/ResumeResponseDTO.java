@@ -41,6 +41,7 @@ public class ResumeResponseDTO {
     public static class UpdateResultDTO {
 
         private Long resumeId;
+        List<FileDTO> fileDTOS;
     }
 
     @Getter

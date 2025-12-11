@@ -48,6 +48,7 @@ public class ResumeRequestDTO {
         private LocalDate applyStart;
         private LocalDate applyEnd;
         private List<CoverLetterDTO> coverLetterDTOS = new ArrayList<>();  //null 가능
+        private List<FileDTO> fileDTOS = new ArrayList<>();  //null 가능
     }
 
     @Getter

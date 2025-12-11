@@ -13,6 +13,7 @@ import dev.resumate.converter.ResumeSearchConverter;
 import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
+import dev.resumate.repository.AttachmentRepository;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.repository.ResumeSearchRepository;
 import dev.resumate.repository.TaggingRepository;
@@ -44,7 +45,6 @@ public class ResumeService {
     private static final String S3_FOLDER = "attachment/";
 
     private final ResumeRepository resumeRepository;
-    private final AttachmentService attachmentService;
     private final TaggingService taggingService;
     private final CoverLetterService coverLetterService;
     private final HomeService homeService;
@@ -52,6 +52,7 @@ public class ResumeService {
     private final RedisUtil redisUtil;
     private final RecentResumeRepository recentResumeRepository;
     private final S3Util s3Util;
+    private final AttachmentRepository attachmentRepository;
 
     /**
      * 지원서 저장
@@ -78,7 +79,7 @@ public class ResumeService {
         //첨부파일 추가
         for (ResumeRequestDTO.FileDTO file : request.getFileDTOS()) {
             String uploadKey = S3_FOLDER + resume.getTitle() + UUID.randomUUID();  //고유한 키 생성
-            String presignedUrl = uploadS3AndConvertAttachment(file.getFileName(), file.getContentType(), uploadKey);
+            String presignedUrl = getPresignedUrlForS3Upload(file.getFileName(), file.getContentType(), uploadKey);
             presignedUrlList.add(buildFileDTO(file, presignedUrl));
             resume.addAttachment(buildAttachment(file, uploadKey));
         }
@@ -120,7 +121,7 @@ public class ResumeService {
     }
 
     //presigned url 발급
-    private String uploadS3AndConvertAttachment(String fileName, String contentType, String uploadKey) {
+    private String getPresignedUrlForS3Upload(String fileName, String contentType, String uploadKey) {
         if (fileName == null) {
             throw new BusinessBaseException(ErrorCode.FILE_NAME_IS_NULL);
         }
@@ -149,14 +150,16 @@ public class ResumeService {
 
     //지원서 수정
     @Transactional
-    public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request, List<MultipartFile> files) throws IOException {
+    public ResumeResponseDTO.UpdateResultDTO updateResume(Member member, Long resumeId, ResumeRequestDTO.UpdateDTO request) throws IOException {
+
+        List<ResumeResponseDTO.FileDTO> presignedUrlList = new ArrayList<>();
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
 
         //벡터db에서 기존 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
 
         coverLetterService.updateCoverLetters(request.getCoverLetterDTOS(), resume);  //자소서 수정
-        attachmentService.updateFiles(files, resume);  //첨부 파일 수정
+        presignedUrlList = updateFilesWithPresignedUrl(resume, request.getFileDTOS());  //첨부 파일 수정
         resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
         taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
@@ -169,17 +172,55 @@ public class ResumeService {
 
         return ResumeResponseDTO.UpdateResultDTO.builder()
                 .resumeId(resume.getId())
+                .fileDTOS(presignedUrlList)
                 .build();
     }
 
-    //지원서 삭제
+    //첨부파일 수정하고, presigned url 발급
+    private List<ResumeResponseDTO.FileDTO> updateFilesWithPresignedUrl(Resume resume, List<ResumeRequestDTO.FileDTO> newAttachList) {
+        List<ResumeResponseDTO.FileDTO> fileDTOS = new ArrayList<>();
+        List<Attachment> oldAttachList = attachmentRepository.findAllByResume(resume);
+
+        if (newAttachList == null) { //수정 파일이 null인 경우 기존 파일 삭제
+            oldAttachList.forEach(oldAttachment -> s3Util.deleteObject(oldAttachment.getUploadKey()));
+            resume.getAttachments().removeIf(oldAttachList::contains);
+        } else {
+            Iterator<ResumeRequestDTO.FileDTO> fileIterator = newAttachList.iterator();
+
+            for (Attachment oldAttach : oldAttachList) {
+                if (fileIterator.hasNext()) {
+                    ResumeRequestDTO.FileDTO newAttach = fileIterator.next();
+                    oldAttach.setFileName(newAttach.getFileName());
+                    fileDTOS.add(buildFileDTO(newAttach, s3Util.getPresignedUrl(oldAttach.getUploadKey(), newAttach.getContentType())));//presigned url 발급
+                } else {  //더 이상 바꿀 file이 없으면 남은 기존 파일은 삭제
+                    s3Util.deleteObject(oldAttach.getUploadKey());
+                    resume.getAttachments().remove(oldAttach);
+                }
+            }
+
+            //기존보다 수정 파일이 많은 경우
+            while (fileIterator.hasNext()) {
+                ResumeRequestDTO.FileDTO file = fileIterator.next();
+                String uploadKey = S3_FOLDER + resume.getTitle() + UUID.randomUUID();  //고유한 키 생성
+                fileDTOS.add(buildFileDTO(file, s3Util.getPresignedUrl(uploadKey, file.getContentType())));  //presigned url 발급
+                resume.addAttachment(AttachmentConverter.toAttachment(uploadKey, file.getFileName()));
+            }
+        }
+        return fileDTOS;
+    }
+
+    /**
+     * 지원서 삭제
+     * @param member
+     * @param resumeId
+     */
     @Transactional
     public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
         taggingService.deleteTagging(resume);
         //첨부파일 s3에서 삭제
-        attachmentService.deleteFromS3(resume);
+        deleteFromS3(resume);
 
         //벡터db에서 자소서 질문 벡터 삭제
         //deleteQuestionVector(resume);
@@ -189,12 +230,22 @@ public class ResumeService {
         resumeRepository.deleteById(resume.getId());
     }
 
+    //첨부파일 s3에서 삭제
+    private void deleteFromS3(Resume resume) {
+        //s3에서 삭제
+        List<Attachment> attachments = attachmentRepository.findAllByResume(resume);
+        for (Attachment attachment : attachments) {
+            s3Util.deleteObject(attachment.getUploadKey());
+        }
+    }
+
     //최근 지원서 삭제
     private void deleteRecentResume(Member member, Resume resume) {
         redisUtil.deleteSortedSetMember(member.getId().toString(), resume.getId());
         recentResumeRepository.deleteById(resume.getId());
     }
 
+    //벡터 삭제
     private void deleteQuestionVector(Resume resume) {
         List<String> Ids = resume.getCoverLetters().stream().map(coverLetter -> coverLetter.getId().toString()).toList();
         for (String id : Ids) {
