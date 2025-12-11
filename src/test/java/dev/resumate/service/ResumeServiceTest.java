@@ -9,6 +9,7 @@ import dev.resumate.domain.Resume;
 import dev.resumate.domain.ResumeSearch;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
+import dev.resumate.repository.AttachmentRepository;
 import dev.resumate.repository.ResumeRepository;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import org.junit.jupiter.api.BeforeEach;
@@ -45,13 +46,14 @@ class ResumeServiceTest {
     @Mock
     private HomeService homeService;
     @Mock
-    private AttachmentService attachmentService;
-    @Mock
     private CoverLetterService coverLetterService;
     @Mock
     private RedisUtil redisUtil;
     @Mock
     private RecentResumeRepository recentResumeRepository;
+    @Mock
+    private AttachmentRepository attachmentRepository;
+
     private Member member;
     private Resume resume;
     private List<Resume> resumes;
@@ -123,7 +125,6 @@ class ResumeServiceTest {
         assertDoesNotThrow(() -> resumeService.deleteResume(member, resumeId));
         verify(resumeRepository).deleteById(resumeId);
         verify(taggingService).deleteTagging(resume);
-        //verify(attachmentService).deleteFromS3(resume);
     }
 
     @Test
@@ -225,6 +226,7 @@ class ResumeServiceTest {
                 .orgUrl("https://test.com")
                 .resumeSearch(resumeSearch)
                 .taggings(new ArrayList<>())
+                .attachments(new ArrayList<>())
                 .build();
 
         ReflectionTestUtils.setField(resume, "createdAt", LocalDate.now().atStartOfDay());  //resume의 생성시간을 임의로 설정
