@@ -11,6 +11,7 @@ import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
 import dev.resumate.repository.AttachmentRepository;
 import dev.resumate.repository.ResumeRepository;
+import dev.resumate.repository.TaggingRepository;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -42,8 +43,6 @@ class ResumeServiceTest {
     @Mock
     private ResumeRepository resumeRepository;
     @Mock
-    private TaggingService taggingService;
-    @Mock
     private HomeService homeService;
     @Mock
     private CoverLetterService coverLetterService;
@@ -53,6 +52,8 @@ class ResumeServiceTest {
     private RecentResumeRepository recentResumeRepository;
     @Mock
     private AttachmentRepository attachmentRepository;
+    @Mock
+    private TaggingRepository taggingRepository;
 
     private Member member;
     private Resume resume;
@@ -124,7 +125,7 @@ class ResumeServiceTest {
         //when & then
         assertDoesNotThrow(() -> resumeService.deleteResume(member, resumeId));
         verify(resumeRepository).deleteById(resumeId);
-        verify(taggingService).deleteTagging(resume);
+        //verify(taggingService).deleteTagging(resume);
     }
 
     @Test

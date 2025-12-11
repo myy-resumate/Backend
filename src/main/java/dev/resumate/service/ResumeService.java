@@ -13,10 +13,7 @@ import dev.resumate.converter.ResumeSearchConverter;
 import dev.resumate.domain.*;
 import dev.resumate.dto.ResumeRequestDTO;
 import dev.resumate.dto.ResumeResponseDTO;
-import dev.resumate.repository.AttachmentRepository;
-import dev.resumate.repository.ResumeRepository;
-import dev.resumate.repository.ResumeSearchRepository;
-import dev.resumate.repository.TaggingRepository;
+import dev.resumate.repository.*;
 import dev.resumate.repository.dto.AttachmentDTO;
 import dev.resumate.repository.dto.CoverLetterDTO;
 import dev.resumate.repository.dto.ResumeDTO;
@@ -36,6 +33,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -45,7 +44,8 @@ public class ResumeService {
     private static final String S3_FOLDER = "attachment/";
 
     private final ResumeRepository resumeRepository;
-    private final TaggingService taggingService;
+    private final TaggingRepository taggingRepository;
+    private final TagRepository tagRepository;
     private final CoverLetterService coverLetterService;
     private final HomeService homeService;
     private final VectorStore vectorStore;
@@ -90,7 +90,7 @@ public class ResumeService {
         Resume newResume = resumeRepository.save(resume);  //cascade로 저장
 
         //태그 저장은 따로
-        taggingService.saveTagAndTagging(request.getTags(), member, newResume);
+        saveTagAndTagging(request.getTags(), member, newResume);
 
         //redis에 최근 본 지원서로 저장
         homeService.addRecentResume(homeService.toTagDTOList(request.getTags()), newResume, member);
@@ -102,6 +102,34 @@ public class ResumeService {
                 .resumeId(newResume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //태그, 태깅 저장
+    private void saveTagAndTagging(List<String> tags, Member member, Resume resume) {
+
+        for (String tagName : tags) {
+            Tag tag = saveTag(tagName, member);
+            saveTagging(resume, tag);
+        }
+    }
+
+    //이미 있으면 태그 반환, 없으면 저장
+    private Tag saveTag(String tagName, Member member) {
+
+        return tagRepository.findByNameAndMember(tagName, member)
+                .orElseGet(() -> tagRepository.save(Tag.builder()
+                        .name(tagName)
+                        .member(member)
+                        .build()));
+    }
+
+    private void saveTagging(Resume resume, Tag tag) {
+
+        Tagging tagging = Tagging.builder()
+                .tag(tag)
+                .build();
+        resume.addTagging(tagging);  //양방향 편의 메소드
+        taggingRepository.save(tagging);
     }
 
     //첨부파일 빌더
@@ -162,7 +190,7 @@ public class ResumeService {
         presignedUrlList = updateFilesWithPresignedUrl(resume, request.getFileDTOS());  //첨부 파일 수정
         resume.getResumeSearch().setResumeSearch(request);  //ResumeSearch 수정
         resume.setResume(request);  //지원서 수정
-        taggingService.updateTagging(request.getTags(), member, resume);  //태깅 수정
+        updateTagging(request.getTags(), member, resume);  //태깅 수정
 
         //redis에 최근 본 지원서로 저장
         homeService.addRecentResume(request.getTags(), resume, member);
@@ -174,6 +202,34 @@ public class ResumeService {
                 .resumeId(resume.getId())
                 .fileDTOS(presignedUrlList)
                 .build();
+    }
+
+    //태깅 수정
+    public void updateTagging(List<TagDTO> tags, Member member, Resume resume) {
+
+        List<Tagging> oldTaggings = taggingRepository.findAllByResume(resume);
+
+        //Map으로 변환 - key=taggingId, value=tagging객체
+        Map<Long, Tagging> oldTaggingMap = oldTaggings.stream().collect(Collectors.toMap(Tagging::getId, Function.identity()));
+
+        //taggingId를 Set에 저장 - 삭제 대상 tagging
+        Set<Long> taggingIdsToDelete = new HashSet<>(oldTaggingMap.keySet());
+
+        for (TagDTO tagDTO : tags) {
+            Tag tag = saveTag(tagDTO.getTagName(), member);
+
+            if (oldTaggingMap.containsKey(tagDTO.getTaggingId())) {
+                Tagging tagging = oldTaggingMap.get(tagDTO.getTaggingId());
+                tagging.setTag(tag);  //변경감지
+                taggingIdsToDelete.remove(tagDTO.getTaggingId());
+            } else {
+                saveTagging(resume, tag);
+            }
+        }
+        //양방향 매핑된 resume의 tagging리스트에서도 요소 삭제
+        resume.getTaggings().removeIf(tagging -> taggingIdsToDelete.contains(tagging.getId()));
+        //set에 남아있는 tagging들 삭제
+        taggingRepository.deleteAllById(taggingIdsToDelete);
     }
 
     //첨부파일 수정하고, presigned url 발급
@@ -218,7 +274,7 @@ public class ResumeService {
     public void deleteResume(Member member, Long resumeId) {
         Resume resume = resumeRepository.findById(resumeId).orElseThrow(() -> new BusinessBaseException(ErrorCode.RESUME_NOT_FOUND));
         //태깅은 cascade 안했으므로 따로 삭제
-        taggingService.deleteTagging(resume);
+        taggingRepository.deleteAllByResume(resume);
         //첨부파일 s3에서 삭제
         deleteFromS3(resume);
 
